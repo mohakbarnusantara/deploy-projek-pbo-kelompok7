@@ -42,7 +42,6 @@ class Motor extends EntitasBase {
 class SukuCadang extends EntitasBase {
     constructor(nama, stok, harga, id=null, kode=null) {
         super(id);
-        // Tambahan: Auto-generate kode jika tidak diberikan
         this.kode = kode || 'SP-' + Math.floor(Math.random() * 9000 + 1000).toString();
         this.nama = nama;
         this._stok = parseInt(stok);
@@ -127,7 +126,7 @@ const app = {
     formatRp: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }),
 
     async init() {
-        await this.load(); // Menunggu proses pengambilan data dari database selesai
+        await this.load(); 
         this.startClock();
         ui.renderAll();
         document.getElementById('motor-pemilik').addEventListener('input', (e) => {
@@ -193,7 +192,6 @@ const app = {
         
         this.cart = [];
         ui.renderCart();
-        
         ui.nav('dashboard');
     },
 
@@ -257,34 +255,32 @@ const app = {
     },
 
     async hapusMotor(id) { 
-            if(confirm("Hapus data motor ini secara permanen dari database?")) { 
-                try {
-                    const response = await fetch('/api/deleteMotor', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id })
-                    });
+        if(confirm("Hapus data motor ini secara permanen dari database?")) { 
+            try {
+                const response = await fetch('/api/deleteMotor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
 
-                    if (response.ok) {
-                        await this.load(); // Sinkronkan ulang dari database
-                        this.refreshUI();
-                    } else {
-                        alert("Gagal menghapus motor. Motor ini mungkin masih terikat dengan data antrean atau riwayat servis.");
-                    }
-                } catch (error) {
-                    console.error("Error delete motor:", error);
+                if (response.ok) {
+                    await this.load(); 
+                    this.refreshUI();
+                } else {
+                    alert("Gagal menghapus motor. Motor ini mungkin masih terikat dengan data antrean atau riwayat servis.");
                 }
-            } 
-        },
+            } catch (error) {
+                console.error("Error delete motor:", error);
+            }
+        } 
+    },
 
-    // QUEUE
     // QUEUE
     async handleAntrianSubmit(e) {
         e.preventDefault();
         const motorId = document.getElementById('antrian-motor-id').value;
         const keluhan = document.getElementById('antrian-keluhan').value;
         
-        // Validasi jika motor sudah ada di antrean
         if(this.antrian.find(a => a.motorId == motorId && a.status != 'SELESAI')) {
             return alert("Motor sudah dalam antrean!");
         }
@@ -299,8 +295,8 @@ const app = {
             });
 
             if (response.ok) {
-                e.target.reset(); // Kosongkan form
-                await this.load(); // Sinkronkan data terbaru dari database
+                e.target.reset(); 
+                await this.load(); 
                 this.refreshUI();
             } else {
                 alert("Gagal menambahkan antrean.");
@@ -312,7 +308,6 @@ const app = {
 
     async setProses(antrianId) {
         try {
-            // Panggil API untuk mengubah status di database
             const response = await fetch('/api/updateQueue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -320,9 +315,8 @@ const app = {
             });
 
             if (response.ok) {
-                await this.load(); // Tarik data terbaru yang sudah berstatus PROSES
+                await this.load(); 
                 
-                // Siapkan data di form kasir
                 const item = this.antrian.find(a => a.id == antrianId);
                 if (item) {
                     document.getElementById('kasir-motor-id').value = item.motorId;
@@ -355,19 +349,16 @@ const app = {
 
             if (response.ok) {
                 if(id) {
-                        const idx = this.parts.findIndex(p => p.id == id);
-                        if(idx !== -1) {
-                            const diff = s - this.parts[idx].stok;
-                            // Tambahkan 'await' pada dua baris ini:
-                            if (diff > 0) await this.pushInventoryLog(n, diff, 'MASUK');
-                            else if (diff < 0) await this.pushInventoryLog(n, Math.abs(diff), 'KELUAR');
-                            }
-                        } else {
-                            // Tambahkan 'await' di sini juga:
-                            await this.pushInventoryLog(n, s, 'MASUK');
-                        }
+                    const idx = this.parts.findIndex(p => p.id == id);
+                    if(idx !== -1) {
+                        const diff = s - this.parts[idx].stok;
+                        if (diff > 0) await this.pushInventoryLog(n, diff, 'MASUK');
+                        else if (diff < 0) await this.pushInventoryLog(n, Math.abs(diff), 'KELUAR');
+                    }
+                } else {
+                    await this.pushInventoryLog(n, s, 'MASUK');
+                }
                 
-                localStorage.setItem('motocare_stack', JSON.stringify(this.restokStack));
                 ui.resetPartForm();
                 await this.load();
                 this.refreshUI();
@@ -428,8 +419,7 @@ const app = {
             });
 
             if (response.ok) {
-                this.pushInventoryLog(p.nama, qty, 'MASUK');
-                localStorage.setItem('motocare_stack', JSON.stringify(this.restokStack));
+                await this.pushInventoryLog(p.nama, qty, 'MASUK');
                 ui.closeStokModal();
                 await this.load();
                 this.refreshUI();
@@ -447,7 +437,6 @@ const app = {
         const tanggalStr = now.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
         
         try {
-            // 1. Tembak data log ke database cloud
             const response = await fetch('/api/addLog', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -455,7 +444,6 @@ const app = {
             });
 
             if (response.ok) {
-                // 2. Tarik ulang data dari cloud agar langsung sinkron di layar
                 await this.load();
                 this.refreshUI();
             }
@@ -489,21 +477,19 @@ const app = {
 
     hapusItemCart(id) { this.cart = this.cart.filter(c => c.id != id); ui.renderCart(); },
 
-async handleTransaksiSubmit(e) {
+    async handleTransaksiSubmit(e) {
         e.preventDefault();
         
-        // Ambil data dari form kasir
         const isP = document.getElementById('kasir-parts-only').checked;
         const mId = document.getElementById('kasir-motor-id').value;
         const tglStr = document.getElementById('kasir-tanggal').value;
         const dsk = document.getElementById('kasir-deskripsi').value;
         const jsa = parseInt(document.getElementById('kasir-jasa').value) || 0;
 
-        // Validasi form kosong
         if(!isP && !mId) return alert("Pilih motor yang sedang diproses!");
         if(this.cart.length === 0 && jsa === 0) return alert("Keranjang belanja dan biaya jasa kosong!");
 
-        let m; // Objek motor untuk dicetak di struk
+        let m; 
         let platKendaraan = '-';
         let namaPemilik = 'Pelanggan Umum';
         let antrianIdTarget = null;
@@ -515,16 +501,13 @@ async handleTransaksiSubmit(e) {
             platKendaraan = m.plat;
             namaPemilik = m.pemilik;
             
-            // Cari antrean yang sedang dikerjakan untuk motor ini
             const qI = this.antrian.find(a => a.motorId == mId && a.status == 'PROSES');
             if(qI) antrianIdTarget = qI.id;
         }
 
-        // Buat objek transaksi untuk keperluan struk lokal
         const trx = new TransaksiServis(m, tglStr, dsk, jsa, [...this.cart]);
         const totalSemua = trx.hitungTotal();
 
-        // Tampilkan loading (UX)
         const btn = e.target.querySelector('button[type="submit"]');
         const prevText = btn.innerText;
         btn.innerText = "Mencatat ke Database...";
@@ -541,18 +524,17 @@ async handleTransaksiSubmit(e) {
                     deskripsi: dsk, 
                     jasa: jsa, 
                     total: totalSemua,
-                    parts: this.cart // <--- TAMBAHAN BARU: Kirim rincian keranjang
+                    parts: this.cart 
                 })
             });
 
-            // EKSEKUSI 2: Potong Stok Gudang secara berurutan
+            // EKSEKUSI 2: Potong Stok Gudang secara berurutan & Catat Log
             for (let item of this.cart) {
                 await fetch('/api/restockPart', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: item.id, qty: -item.qty }) 
                 });
-                // Tambahkan 'await' di baris ini:
                 await this.pushInventoryLog(item.nama, item.qty, 'KELUAR');
             }
 
@@ -565,20 +547,14 @@ async handleTransaksiSubmit(e) {
                 });
             }
 
-            // Bersihkan keranjang dan form kasir
-            this.riwayat.unshift(trx); 
             this.cart = []; 
-            this.save(); // Simpan riwayat struk secara lokal
-            
             e.target.reset(); 
             document.getElementById('kasir-parts-only').checked = false; 
             this.toggleKasirMode(); 
             
-            // Sinkronisasi seluruh aplikasi dengan database terbaru
             await this.load(); 
             this.refreshUI(); 
             
-            // Cetak struk dan kembali ke Dashboard
             ui.printStruk(trx); 
             ui.nav('dashboard');
 
@@ -596,13 +572,10 @@ async handleTransaksiSubmit(e) {
     refreshUI() { ui.renderAll(); },
             
     save() {
-        localStorage.setItem('motocare_parts', JSON.stringify(this.parts));
-        localStorage.setItem('motocare_antrian', JSON.stringify(this.antrian));
-        localStorage.setItem('motocare_stack', JSON.stringify(this.restokStack));
-        localStorage.setItem('motocare_riwayat', JSON.stringify(this.riwayat));
+        // Obsolete (dipertahankan agar tidak memicu error pemanggilan fungsi eksternal)
     },
             
-async load() {
+    async load() {
         // 1. AMBIL DATA MOTOR
         try {
             const resMotor = await fetch('/api/getMotor');
@@ -653,11 +626,7 @@ async load() {
                 const dbTrx = await resTrx.json();
                 this.riwayat = dbTrx.map(t => {
                     const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
-                    
-                    // Ekstrak rincian part dari JSON database
                     const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
-                    
-                    // Kembalikan menjadi objek ItemKeranjang agar UI bisa membaca nama, qty, dan harganya
                     const c = partsList.map(cp => new ItemKeranjang(cp.id, cp.nama, cp.qty, cp.harga));
                     
                     const trx = new TransaksiServis(m, t.waktu_transaksi, t.deskripsi, t.biaya_jasa, c, t.id);
@@ -671,7 +640,7 @@ async load() {
         }
 
         // 5. AMBIL DATA LOG INVENTORY DARI DATABASE
-       try {
+        try {
             const resLogs = await fetch('/api/getLogs');
             if (resLogs.ok) {
                 const dbLogs = await resLogs.json();
@@ -750,9 +719,9 @@ const ui = {
         });
     },
             
-        renderMotors() {
+    renderMotors() {
         const tb = document.getElementById('table-motor-data');
-        if (!tb) return; // Keamanan tambahan jika elemen tidak ditemukan
+        if (!tb) return; 
         tb.innerHTML = '';
         
         const searchEl = document.getElementById('search-motor');
@@ -771,7 +740,6 @@ const ui = {
         }
                 
         filteredMotors.forEach(m => {
-            // Penanganan status (Default ke 'NON-AKTIF' jika dari database)
             const status = m.statusTerakhir || 'NON-AKTIF';
             const sc = status === 'ANTRIAN' ? 'status-antrian' : 
                     (status === 'PROSES' ? 'status-proses' : 
@@ -852,7 +820,7 @@ const ui = {
         const sa = document.getElementById('antrian-motor-id'); sa.innerHTML = '<option value="">-- Pilih Motor --</option>';
         app.motors.filter(m => m.statusTerakhir !== 'PROSES' && m.statusTerakhir !== 'ANTRIAN').forEach(m => sa.innerHTML += `<option value="${m.id}">${m.getInfo()} (Milik: ${m.pemilik})</option>`);
                 
-        const sk = document.getElementById('kasir-motor-id'); sk.innerHTML = '<option value="">-- Pilih Motor Proses --</option>';
+        const sk = document.getElementById('kasir-motor-id'); sk.innerHTML = '<option value="">-- Pilih Motor Process --</option>';
         app.antrian.filter(a => a.status === 'PROSES').forEach(n => { const m = app.motors.find(x => x.id == n.motorId); if(m) sk.innerHTML += `<option value="${m.id}">#${n.nomor} | ${m.getInfo()}</option>`; });
                 
         const sp = document.getElementById('kasir-pilih-part'); sp.innerHTML = '<option value="">-- Cari Suku Cadang --</option>';
