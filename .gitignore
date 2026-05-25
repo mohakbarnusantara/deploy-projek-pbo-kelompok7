@@ -1,0 +1,10 @@
+.vercel
+# Jangan unggah rahasia
+.env
+
+# Jangan unggah folder sampah/dependensi
+node_modules/
+.vercel/
+
+# File sistem
+.DS_Store
