@@ -420,11 +420,22 @@ const app = {
         }
     },
 
-    pushInventoryLog(nama, qty, tipe) {
-        const now = new Date();
-        this.restokStack.push({ nama, qty, tipe, waktu: now.toLocaleTimeString('id-ID'), tanggal: now.toLocaleDateString('id-ID', {day:'2-digit', month:'short'}) });
-        if(this.restokStack.length > 25) this.restokStack.shift(); 
-    },
+    async pushInventoryLog(nama, qty, tipe) {
+            const now = new Date();
+            const waktuStr = now.toLocaleTimeString('id-ID');
+            const tanggalStr = now.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
+            
+            try {
+                // Tembak data log ke database
+                await fetch('/api/addLog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nama: nama, qty: qty, tipe: tipe, waktu: waktuStr, tanggal: tanggalStr })
+                });
+            } catch (error) {
+                console.error("Gagal mencatat log ke database", error);
+            }
+        },
 
     toggleKasirMode() {
         const isP = document.getElementById('kasir-parts-only').checked, mS = document.getElementById('kasir-motor-id'), dS = document.getElementById('kasir-deskripsi'), jI = document.getElementById('kasir-jasa');
@@ -620,8 +631,23 @@ async load() {
             this.riwayat = [];
         }
 
-        // Histori tumpukan restok (stack) dibiarkan di lokal saja agar tidak membebani database
-        this.restokStack = JSON.parse(localStorage.getItem('motocare_stack')) || [];
+// 5. AMBIL DATA LOG INVENTORY DARI DATABASE
+        try {
+            const resLogs = await fetch('/api/getLogs');
+            if (resLogs.ok) {
+                const dbLogs = await resLogs.json();
+                this.restokStack = dbLogs.map(l => ({
+                    nama: l.nama_part,
+                    qty: l.qty,
+                    tipe: l.tipe,
+                    waktu: l.waktu,
+                    tanggal: l.tanggal
+                }));
+            }
+        } catch (error) {
+            console.error("Gagal mengambil log:", error);
+            this.restokStack = [];
+        }
     }
 };
 
