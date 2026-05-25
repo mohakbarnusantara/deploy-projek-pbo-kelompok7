@@ -1,13 +1,17 @@
 const db = require('../db');
 
 module.exports = async (req, res) => {
-  // Pastikan hanya menerima request dengan metode GET
   if (req.method === 'GET') {
     try {
-      // Mengambil semua data dari tabel Vehicles, diurutkan dari yang terbaru
-      const result = await db.query('SELECT * FROM Vehicles ORDER BY id DESC');
+      // Mengambil data motor dan JOIN dengan nama pemilik di tabel Customers
+      const query = `
+        SELECT v.id, v.plat_nomor, v.merk, v.model, c.nama AS pemilik 
+        FROM Vehicles v
+        JOIN Customers c ON v.customer_id = c.id
+        ORDER BY v.id DESC
+      `;
+      const result = await db.query(query);
       
-      // Mengirimkan hasil query ke frontend dalam format JSON
       res.status(200).json(result.rows);
     } catch (error) {
       console.error('Error saat mengambil data:', error);
