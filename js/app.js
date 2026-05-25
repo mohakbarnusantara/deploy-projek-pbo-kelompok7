@@ -256,8 +256,27 @@ const app = {
         document.getElementById('btn-cancel-motor').classList.remove('hidden');
     },
 
-    hapusMotor(id) { if(confirm("Hapus data motor?")) { this.motors = this.motors.filter(m => m.id != id); this.save(); this.refreshUI(); } },
+    async hapusMotor(id) { 
+            if(confirm("Hapus data motor ini secara permanen dari database?")) { 
+                try {
+                    const response = await fetch('/api/deleteMotor', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id })
+                    });
 
+                    if (response.ok) {
+                        await this.load(); // Sinkronkan ulang dari database
+                        this.refreshUI();
+                    } else {
+                        alert("Gagal menghapus motor. Motor ini mungkin masih terikat dengan data antrean atau riwayat servis.");
+                    }
+                } catch (error) {
+                    console.error("Error delete motor:", error);
+                }
+            } 
+        },
+        
     // QUEUE
     // QUEUE
     async handleAntrianSubmit(e) {
