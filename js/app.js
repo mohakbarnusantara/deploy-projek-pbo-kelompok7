@@ -421,21 +421,27 @@ const app = {
     },
 
     async pushInventoryLog(nama, qty, tipe) {
-            const now = new Date();
-            const waktuStr = now.toLocaleTimeString('id-ID');
-            const tanggalStr = now.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
-            
-            try {
-                // Tembak data log ke database
-                await fetch('/api/addLog', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nama: nama, qty: qty, tipe: tipe, waktu: waktuStr, tanggal: tanggalStr })
-                });
-            } catch (error) {
-                console.error("Gagal mencatat log ke database", error);
+        const now = new Date();
+        const waktuStr = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        const tanggalStr = now.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
+        
+        try {
+            // 1. Tembak data log ke database cloud
+            const response = await fetch('/api/addLog', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nama: nama, qty: qty, tipe: tipe, waktu: waktuStr, tanggal: tanggalStr })
+            });
+
+            if (response.ok) {
+                // 2. Tarik ulang data dari cloud agar langsung sinkron di layar
+                await this.load();
+                this.refreshUI();
             }
-        },
+        } catch (error) {
+            console.error("Gagal mencatat log ke database", error);
+        }
+    },
 
     toggleKasirMode() {
         const isP = document.getElementById('kasir-parts-only').checked, mS = document.getElementById('kasir-motor-id'), dS = document.getElementById('kasir-deskripsi'), jI = document.getElementById('kasir-jasa');
@@ -642,8 +648,8 @@ async load() {
             this.riwayat = [];
         }
 
-// 5. AMBIL DATA LOG INVENTORY DARI DATABASE
-        try {
+        // 5. AMBIL DATA LOG INVENTORY DARI DATABASE
+       try {
             const resLogs = await fetch('/api/getLogs');
             if (resLogs.ok) {
                 const dbLogs = await resLogs.json();
@@ -656,7 +662,7 @@ async load() {
                 }));
             }
         } catch (error) {
-            console.error("Gagal mengambil log:", error);
+            console.error("Gagal mengambil log dari database:", error);
             this.restokStack = [];
         }
     }
