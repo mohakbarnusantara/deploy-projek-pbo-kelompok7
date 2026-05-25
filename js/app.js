@@ -276,7 +276,7 @@ const app = {
                 }
             } 
         },
-        
+
     // QUEUE
     // QUEUE
     async handleAntrianSubmit(e) {
@@ -355,15 +355,17 @@ const app = {
 
             if (response.ok) {
                 if(id) {
-                    const idx = this.parts.findIndex(p => p.id == id);
-                    if(idx !== -1) {
-                        const diff = s - this.parts[idx].stok;
-                        if (diff > 0) this.pushInventoryLog(n, diff, 'MASUK');
-                        else if (diff < 0) this.pushInventoryLog(n, Math.abs(diff), 'KELUAR');
-                    }
-                } else {
-                    this.pushInventoryLog(n, s, 'MASUK');
-                }
+                        const idx = this.parts.findIndex(p => p.id == id);
+                        if(idx !== -1) {
+                            const diff = s - this.parts[idx].stok;
+                            // Tambahkan 'await' pada dua baris ini:
+                            if (diff > 0) await this.pushInventoryLog(n, diff, 'MASUK');
+                            else if (diff < 0) await this.pushInventoryLog(n, Math.abs(diff), 'KELUAR');
+                            }
+                        } else {
+                            // Tambahkan 'await' di sini juga:
+                            await this.pushInventoryLog(n, s, 'MASUK');
+                        }
                 
                 localStorage.setItem('motocare_stack', JSON.stringify(this.restokStack));
                 ui.resetPartForm();
@@ -548,9 +550,10 @@ async handleTransaksiSubmit(e) {
                 await fetch('/api/restockPart', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: item.id, qty: -item.qty }) // Minus (-) akan mengurangi stok
+                    body: JSON.stringify({ id: item.id, qty: -item.qty }) 
                 });
-                this.pushInventoryLog(item.nama, item.qty, 'KELUAR');
+                // Tambahkan 'await' di baris ini:
+                await this.pushInventoryLog(item.nama, item.qty, 'KELUAR');
             }
 
             // EKSEKUSI 3: Ubah Status Antrean Menjadi 'SELESAI'
