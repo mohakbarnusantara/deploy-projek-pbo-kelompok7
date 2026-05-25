@@ -508,7 +508,14 @@ async handleTransaksiSubmit(e) {
             await fetch('/api/addTransaction', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plat: platKendaraan, nama: namaPemilik, deskripsi: dsk, jasa: jsa, total: totalSemua })
+                body: JSON.stringify({ 
+                    plat: platKendaraan, 
+                    nama: namaPemilik, 
+                    deskripsi: dsk, 
+                    jasa: jsa, 
+                    total: totalSemua,
+                    parts: this.cart // <--- TAMBAHAN BARU: Kirim rincian keranjang
+                })
             });
 
             // EKSEKUSI 2: Potong Stok Gudang secara berurutan
@@ -617,11 +624,15 @@ async load() {
             if (resTrx.ok) {
                 const dbTrx = await resTrx.json();
                 this.riwayat = dbTrx.map(t => {
-                    // Buat objek dummy agar formatnya sesuai dengan sistem OOP di aplikasi Anda
                     const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
-                    const trx = new TransaksiServis(m, t.waktu_transaksi, t.deskripsi, t.biaya_jasa, [], t.id);
                     
-                    // Paksa total hitungan sesuai database
+                    // Ekstrak rincian part dari JSON database
+                    const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
+                    
+                    // Kembalikan menjadi objek ItemKeranjang agar UI bisa membaca nama, qty, dan harganya
+                    const c = partsList.map(cp => new ItemKeranjang(cp.id, cp.nama, cp.qty, cp.harga));
+                    
+                    const trx = new TransaksiServis(m, t.waktu_transaksi, t.deskripsi, t.biaya_jasa, c, t.id);
                     trx.hitungTotal = () => t.total_biaya; 
                     return trx;
                 });
