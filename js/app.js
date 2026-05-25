@@ -129,13 +129,6 @@ const app = {
         await this.load(); 
         this.startClock();
         ui.renderAll();
-        document.getElementById('motor-pemilik').addEventListener('input', (e) => {
-            const regex = /^[a-zA-Z\s]*$/;
-            const err = document.getElementById('err-nama');
-            if(!regex.test(e.target.value)) { e.target.classList.add('border-red-500'); err.classList.remove('hidden'); }
-            else { e.target.classList.remove('border-red-500'); err.classList.add('hidden'); }
-        });
-        document.getElementById('kasir-jasa').addEventListener('input', () => ui.renderCart());
     },
 
     startClock() {
@@ -575,32 +568,31 @@ const app = {
         // Obsolete (dipertahankan agar tidak memicu error pemanggilan fungsi eksternal)
     },
             
-    async load() {
-        // 1. AMBIL DATA MOTOR
+async load() {
+        // 1. Ambil Motor
         try {
-            const resMotor = await fetch('/api/getMotor');
-            if (resMotor.ok) {
-                const dbMotors = await resMotor.json();
-                this.motors = dbMotors.map(x => { 
+            const res = await fetch('/api/getMotor');
+            if (res.ok) {
+                const data = await res.json();
+                this.motors = data.map(x => { 
                     const m = new Motor(x.plat_nomor, x.merk, x.model, x.pemilik, 2026, x.id);
                     m.statusTerakhir = 'NON-AKTIF';
                     return m;
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error("Motor load error", e); }
 
-        // 2. AMBIL DATA ANTREAN
+        // 2. Ambil Antrian
         try {
-            const resQueue = await fetch('/api/getQueue');
-            if (resQueue.ok) {
-                const dbQueue = await resQueue.json();
-                this.antrian = dbQueue.map(q => {
+            const res = await fetch('/api/getQueue');
+            if (res.ok) {
+                const data = await res.json();
+                this.antrian = data.map(q => {
                     const a = new AntrianItem(q.vehicle_id, q.keluhan, q.nomor_urut);
                     a.id = q.id;
                     a.status = q.status;
                     return a;
                 });
-                
                 this.antrian.forEach(q => {
                     if(q.status !== 'SELESAI') {
                         const m = this.motors.find(x => x.id == q.motorId);
@@ -608,43 +600,39 @@ const app = {
                     }
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error("Queue load error", e); }
 
-        // 3. AMBIL DATA SPAREPART
+        // 3. Ambil Parts
         try {
-            const resParts = await fetch('/api/getParts');
-            if (resParts.ok) {
-                const dbParts = await resParts.json();
-                this.parts = dbParts.map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part));
+            const res = await fetch('/api/getParts');
+            if (res.ok) {
+                const data = await res.json();
+                this.parts = data.map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part));
             }
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error("Parts load error", e); }
 
-        // 4. AMBIL DATA TRANSAKSI (DASHBOARD) DARI DATABASE
+        // 4. Ambil Transaksi
         try {
-            const resTrx = await fetch('/api/getTransactions');
-            if (resTrx.ok) {
-                const dbTrx = await resTrx.json();
-                this.riwayat = dbTrx.map(t => {
+            const res = await fetch('/api/getTransactions');
+            if (res.ok) {
+                const data = await res.json();
+                this.riwayat = data.map(t => {
                     const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
                     const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
                     const c = partsList.map(cp => new ItemKeranjang(cp.id, cp.nama, cp.qty, cp.harga));
-                    
                     const trx = new TransaksiServis(m, t.waktu_transaksi, t.deskripsi, t.biaya_jasa, c, t.id);
                     trx.hitungTotal = () => t.total_biaya; 
                     return trx;
                 });
             }
-        } catch (error) {
-            console.error("Gagal mengambil riwayat transaksi:", error);
-            this.riwayat = [];
-        }
+        } catch(e) { console.error("Transaction load error", e); }
 
-        // 5. AMBIL DATA LOG INVENTORY DARI DATABASE
+        // 5. Ambil Log Inventory
         try {
-            const resLogs = await fetch('/api/getLogs');
-            if (resLogs.ok) {
-                const dbLogs = await resLogs.json();
-                this.restokStack = dbLogs.map(l => ({
+            const res = await fetch('/api/getLogs');
+            if (res.ok) {
+                const data = await res.json();
+                this.restokStack = data.map(l => ({
                     nama: l.nama_part,
                     qty: l.qty,
                     tipe: l.tipe,
@@ -652,10 +640,13 @@ const app = {
                     tanggal: l.tanggal
                 }));
             }
-        } catch (error) {
-            console.error("Gagal mengambil log dari database:", error);
-            this.restokStack = [];
-        }
+        } catch(e) { console.error("Log load error", e); }
+        
+        this.refreshUI();
+    },
+
+    save() {
+        // KOSONGKAN: Karena kita 100% cloud, tidak perlu menyimpan ke localStorage lagi.
     }
 };
 
