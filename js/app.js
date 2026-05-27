@@ -423,23 +423,46 @@ const app = {
     // --- MANAJEMEN SPAREPART & INVENTORY LOGS ---
     async handlePartSubmit() {
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
-        const id = document.getElementById('part-id-edit').value, 
-              kodeInput = document.getElementById('part-kode').value.toUpperCase(),
-              n = document.getElementById('part-nama').value,
-              s = parseInt(document.getElementById('part-stok').value), 
-              h = parseInt(document.getElementById('part-harga').value);
-              
-        if(!n || isNaN(s) || isNaN(h) || s < 0 || h < 0) return alert("Lengkapi form nama, stok (minimal 0), dan harga (minimal 0)!");
         
+        const id = document.getElementById('part-id-edit').value;
+        const kodeInput = document.getElementById('part-kode').value.toUpperCase();
+        const n = document.getElementById('part-nama').value.trim();
+        const kategori = document.getElementById('part-kategori').value; // Ambil nilai dropdown
+        const s = parseInt(document.getElementById('part-stok').value); 
+        const h = parseInt(document.getElementById('part-harga').value);
+              
+        // VALIDASI 1: Cek Kategori Barang
+        if (!kategori) {
+            return alert('Silakan pilih kategori barang terlebih dahulu.');
+        }
+
+        // VALIDASI 2: Cek Harga (Mencegah Rp 0 atau Negatif)
+        if (isNaN(h) || h < 100) {
+            return alert('Harga suku cadang tidak boleh Rp 0. Silakan masukkan harga yang valid minimal Rp 100.');
+        }
+
+        // VALIDASI 3: Cek Nama & Stok Minimal
+        if(!n || isNaN(s) || s < 0) {
+            return alert("Lengkapi form nama barang, dan pastikan stok minimal 0!");
+        }
+        
+        const btn = document.getElementById('btn-save-part');
+        const prevText = btn.innerText;
+        btn.innerText = "Menyimpan...";
+        btn.disabled = true;
+
         try {
+            // Catatan: Jika Anda ingin menyimpan kategori ke database,
+            // pastikan Anda menambahkan 'kategori: kategori' pada payload body di bawah ini.
             await fetch('/api/manageData', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     action: 'add', table: 'Parts', 
-                    data: { id: id || null, kode: kodeInput || null, nama: n, stok: s, harga: h } 
+                    data: { id: id || null, kode: kodeInput || null, nama: n, stok: s, harga: h, kategori: kategori } 
                 })
             });
 
+            // Logika Inventory Log
             if(id) {
                 const idx = this.parts.findIndex(p => p.id == id);
                 if(idx !== -1) {
@@ -453,7 +476,13 @@ const app = {
             
             ui.resetPartForm();
             await this.load();
-        } catch (error) { console.error(error); }
+        } catch (error) { 
+            console.error(error); 
+            alert("Gagal menghubungi server.");
+        } finally {
+            btn.innerText = prevText;
+            btn.disabled = false;
+        }
     },
 
     editPart(id) {
@@ -781,9 +810,13 @@ const ui = {
         document.getElementById('btn-save-motor').innerText = "Simpan Data"; document.getElementById('btn-cancel-motor').classList.add('hidden'); 
     },
     resetPartForm() { 
-        document.getElementById('part-id-edit').value = ''; document.getElementById('part-kode').value = ''; 
-        document.getElementById('part-nama').value = ''; document.getElementById('part-stok').value = ''; 
-        document.getElementById('part-harga').value = ''; document.getElementById('btn-save-part').innerText = "Tambah"; 
+        document.getElementById('part-id-edit').value = ''; 
+        document.getElementById('part-kode').value = ''; 
+        document.getElementById('part-nama').value = ''; 
+        document.getElementById('part-kategori').value = ''; // Reset Kategori
+        document.getElementById('part-stok').value = ''; 
+        document.getElementById('part-harga').value = ''; 
+        document.getElementById('btn-save-part').innerText = "Tambah"; 
         document.getElementById('btn-cancel-part').classList.add('hidden'); 
     },
     openStokModal(id, nm) { document.getElementById('restok-id').value = id; document.getElementById('restok-label').innerText = nm; document.getElementById('modal-stok').classList.replace('hidden','flex'); },
