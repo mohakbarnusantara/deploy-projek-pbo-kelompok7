@@ -90,18 +90,35 @@ const app = {
         this.startClock();
         ui.renderAll();
 
-        // FIX BUG: Cegah minus di berbagai input Form
+        // 1. VALIDASI REAL-TIME INPUT (Auto-Format)
+        const namaInput = document.getElementById('motor-pemilik');
+        const platInput = document.getElementById('motor-plat');
         const jasaInput = document.getElementById('kasir-jasa');
         const stokInput = document.getElementById('part-stok');
         const hargaInput = document.getElementById('part-harga');
         const restokQtyInput = document.getElementById('restok-qty');
 
-        if (jasaInput) {
-            jasaInput.addEventListener('input', function() {
-                if (this.value < 0) this.value = 0;
-                ui.renderCart(); 
+        // Validasi Nama Pemilik (Hapus karakter aneh saat mengetik, lalu format saat selesai)
+        if (namaInput) {
+            namaInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^a-zA-Z\s.,']/g, ''); // Hanya alfabet, spasi, ., '
+                const errLabel = document.getElementById('err-nama');
+                if(errLabel) errLabel.classList.add('hidden');
+            });
+            namaInput.addEventListener('blur', function() {
+                // Saat selesai mengetik: Hapus spasi ganda & buat Title Case
+                this.value = this.value.replace(/\s+/g, ' ').trim().replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
             });
         }
+
+        // Validasi Plat Nomor (Otomatis kapital & hapus spasi berlebih)
+        if (platInput) {
+            platInput.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+            platInput.addEventListener('blur', function() { this.value = this.value.replace(/\s+/g, ' ').trim(); });
+        }
+
+        // Cegah Minus
+        if (jasaInput) jasaInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; ui.renderCart(); });
         if (stokInput) stokInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
         if (hargaInput) hargaInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
         if (restokQtyInput) restokQtyInput.addEventListener('input', function() { if (this.value < 1) this.value = 1; });
@@ -158,7 +175,7 @@ const app = {
         ui.nav('dashboard');
     },
 
-    // --- INTEGRASI CORE CLOUD (LOAD & DELETE UNIVERSAL) ---
+    // --- INTEGRASI CORE CLOUD ---
     async load() {
         try {
             const [mRes, pRes, qRes, tRes, lRes] = await Promise.all([
@@ -217,32 +234,62 @@ const app = {
         } catch (e) { console.error("Error Deleting Data:", e); }
     },
 
-    // --- MANAJEMEN MOTOR ---
+    // --- MANAJEMEN MOTOR (Dengan Validasi Penuh) ---
     async handleMotorSubmit(e) {
         e.preventDefault();
-        const plat = document.getElementById('motor-plat').value;
+        
+        const id = document.getElementById('motor-id-edit').value;
+        let plat = document.getElementById('motor-plat').value;
         const merk = document.getElementById('motor-merk').value;
         const model = document.getElementById('motor-tipe').value;
-        const pemilik = document.getElementById('motor-pemilik').value; 
+        let pemilik = document.getElementById('motor-pemilik').value; 
         const tahun = document.getElementById('motor-tahun').value;
+
+        // Validasi Final sebelum di push ke server
+        plat = plat.replace(/\s+/g, ' ').trim().toUpperCase();
+        pemilik = pemilik.replace(/\s+/g, ' ').trim();
+        
+        if (pemilik.length < 3 || pemilik.length > 60) {
+            return alert("GAGAL: Panjang nama pemilik harus antara 3 hingga 60 karakter.");
+        }
+        
+        const regexNama = /^[a-zA-Z\s.,']+$/;
+        if (!regexNama.test(pemilik)) {
+            return alert("GAGAL: Nama pemilik mengandung karakter yang dilarang.");
+        }
+
+        // Title Case
+        pemilik = pemilik.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
         const btn = document.getElementById('btn-save-motor');
         const prevText = btn.innerText;
-        btn.innerText = "Menyimpan ke Cloud..."; btn.disabled = true;
+        btn.innerText = "Memverifikasi..."; btn.disabled = true;
 
         try {
-            await fetch('/api/manageData', {
+            const response = await fetch('/api/manageData', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     action: 'add', table: 'Vehicles', 
-                    data: { plat_nomor: plat, merk: merk, model: model, pemilik: pemilik, tahun: tahun }
+                    data: { id: id || null, plat_nomor: plat, merk: merk, model: model, pemilik: pemilik, tahun: tahun }
                 })
             });
-            alert("Motor Berhasil Disimpan!");
+            
+            const result = await response.json();
+            
+            // Tangkap Error 400 (Plat Duplikat)
+            if (!response.ok) {
+                throw new Error(result.error || "Gagal menyimpan data motor ke server.");
+            }
+
+            alert("Data Motor Berhasil Disimpan & Diverifikasi!");
             ui.resetMotorForm();
             await this.load(); 
-        } catch (error) { console.error(error); alert("Koneksi gagal."); } 
-        finally { btn.innerText = prevText; btn.disabled = false; }
+        } catch (error) { 
+            console.error(error); 
+            alert(`⚠️ PERHATIAN:\n${error.message}`); 
+        } finally { 
+            btn.innerText = prevText; btn.disabled = false; 
+        }
     },
 
     editMotor(id) {
@@ -254,7 +301,7 @@ const app = {
         document.getElementById('motor-tipe').value = m.tipe;
         document.getElementById('motor-pemilik').value = m.pemilik;
         document.getElementById('motor-tahun').value = m.tahun;
-        document.getElementById('motor-form-title').innerHTML = '<i class="fa-solid fa-pen text-blue-500"></i> Edit Motor';
+        document.getElementById('motor-form-title').innerHTML = '<i class="fa-solid fa-pen text-blue-500"></i> Edit Data Motor';
         document.getElementById('btn-save-motor').innerText = "Update Motor";
         document.getElementById('btn-cancel-motor').classList.remove('hidden');
     },
@@ -305,11 +352,9 @@ const app = {
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
         const id = document.getElementById('part-id-edit').value, 
               kodeInput = document.getElementById('part-kode').value.toUpperCase(),
-              n = document.getElementById('part-nama').value;
-        
-        // FIX BUG: Paksa konversi ke integer agar tidak ada error string, dan blokir nilai negatif
-        const s = parseInt(document.getElementById('part-stok').value); 
-        const h = parseInt(document.getElementById('part-harga').value);
+              n = document.getElementById('part-nama').value,
+              s = parseInt(document.getElementById('part-stok').value), 
+              h = parseInt(document.getElementById('part-harga').value);
               
         if(!n || isNaN(s) || isNaN(h) || s < 0 || h < 0) return alert("Lengkapi form nama, stok (minimal 0), dan harga (minimal 0)!");
         
@@ -356,7 +401,6 @@ const app = {
         if(confirm("Hapus item secara permanen dari Gudang?")) {
             const p = this.parts.find(x => x.id == id);
             if (p) {
-                // FIX BUG: Kirim log dulu sebelum di delete dari database
                 await this.pushInventoryLog(p.nama, p.stok, 'DIHAPUS');
                 await this.deleteData('Parts', id);
             }
@@ -616,11 +660,9 @@ const ui = {
             tb.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="px-6 py-4"><span class="text-[10px] font-black text-slate-400 block mb-0.5 tracking-wider">${p.kode}</span><span class="font-bold text-slate-700">${p.nama}</span></td><td class="px-6 py-4 text-center font-black ${lw ? 'text-red-500 bg-red-50 rounded-xl' : 'text-slate-800'}">${p.stok}</td><td class="px-6 py-4 text-right font-bold text-blue-600">${app.formatRp.format(p.harga)}</td><td class="px-6 py-4 text-center flex justify-center items-center gap-3 pt-6">${actionBtns}</td></tr>`;
         });
 
-        // FIX BUG: Tampilan Log Terbalik & Hapus Barang
         const lf = document.getElementById('stack-lifo-container'); lf.innerHTML = '';
         if(app.restokStack.length === 0) lf.innerHTML = `<p class="text-slate-500 italic text-xs">Belum ada histori pergerakan stok.</p>`;
         
-        // Menghapus .reverse() karena data dari API (DESC) sudah terbaru di urutan pertama
         app.restokStack.forEach(x => {
             const isM = x.tipe === 'MASUK';
             const isDel = x.tipe === 'DIHAPUS';
@@ -654,7 +696,7 @@ const ui = {
         }
         
         let jsa = parseInt(document.getElementById('kasir-jasa').value) || 0;
-        if(jsa < 0) jsa = 0; // Proteksi ekstra
+        if(jsa < 0) jsa = 0; 
         
         let t = app.cart.reduce((s,i)=>s+i.subtotal, 0) + jsa;
         document.getElementById('kasir-total-display').innerText = app.formatRp.format(t);
@@ -712,7 +754,7 @@ const ui = {
         const isP = tr.motor.plat === '-';
         tr.parts.forEach(p => it += `<tr style="border-bottom:1px dashed #ccc;"><td style="padding:6px 0;">${p.nama} <br><small>x${p.qty}</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td></tr>`);
         let hH = isP ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
-        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;\">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style=\"text-align:right;\">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
+        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
         a.classList.remove('hidden'); setTimeout(() => { window.print(); a.innerHTML = ''; a.classList.add('hidden'); }, 500);
     }
 };
