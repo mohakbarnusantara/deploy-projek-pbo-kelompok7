@@ -729,50 +729,45 @@ const ui = {
         });
     },
 
-    renderStok() {
-            const tb = document.getElementById('table-stok-data'); tb.innerHTML = '';
-            const searchEl = document.getElementById('search-stok');
-            const keyword = searchEl ? searchEl.value.toLowerCase() : '';
-            
-            // Ambil nilai filter kategori dari dropdown HTML
-            const filterEl = document.getElementById('filter-kategori-stok');
-            const kategoriFilter = filterEl ? filterEl.value : '';
-            
-            const role = app.currentUserRole;
+    async handlePartSubmit(e) {
+        e.preventDefault();
+        const id = document.getElementById('part-id').value;
+        const kode = document.getElementById('part-kode').value;
+        const nama = document.getElementById('part-nama').value;
+        const kategori = document.getElementById('part-kategori').value; // <-- WAJIB ADA: Ambil nilai kategori
+        const stok = document.getElementById('part-stok').value;
+        const harga = document.getElementById('part-harga').value;
 
-            // Lakukan penyaringan ganda: berdasarkan text pencarian DAN kategori barang
-            const filteredParts = app.parts.filter(p => {
-                const matchSearch = p.nama.toLowerCase().includes(keyword) || (p.kode && p.kode.toLowerCase().includes(keyword));
-                const matchKategori = kategoriFilter === '' || p.kategori === kategoriFilter;
-                return matchSearch && matchKategori;
+        const payload = {
+            action: 'add',
+            table: 'Parts',
+            data: {
+                id: id || null,
+                kode: kode,
+                nama: nama,
+                kategori: kategori, // <-- WAJIB ADA: Kirim ke backend
+                stok: parseInt(stok),
+                harga: parseInt(harga)
+            }
+        };
+
+        try {
+            const response = await fetch('/api/manageData', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            if(filteredParts.length === 0) tb.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">Suku cadang tidak ditemukan.</td></tr>`;
-
-            filteredParts.forEach(p => {
-                const lw = p.stok < 5;
-                let actionBtns = (role === 'admin' || role === 'gudang') 
-                    ? `<button onclick="app.editPart('${p.id}')" class="text-blue-500 hover:scale-110"><i class="fa-solid fa-pen"></i></button><button onclick="ui.openStokModal('${p.id}','${p.nama}')" class="text-green-600 hover:scale-110"><i class="fa-solid fa-plus"></i></button><button onclick="app.hapusPart('${p.id}')" class="text-red-500 hover:scale-110"><i class="fa-solid fa-trash"></i></button>`
-                    : `<span class="text-[10px] font-black text-slate-300 italic uppercase">Hanya Lihat</span>`;
-
-                tb.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="px-6 py-4"><span class="text-[10px] font-black text-slate-400 block mb-0.5 tracking-wider">${p.kode}</span><span class="font-bold text-slate-700">${p.nama}</span> <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 uppercase border border-slate-200">${p.kategori || 'UMUM'}</span></td><td class="px-6 py-4 text-center font-black ${lw ? 'text-red-500 bg-red-50 rounded-xl' : 'text-slate-800'}">${p.stok}</td><td class="px-6 py-4 text-right font-bold text-blue-600">${app.formatRp.format(p.harga)}</td><td class="px-6 py-4 text-center flex justify-center items-center gap-3 pt-6">${actionBtns}</td></tr>`;
-            });
-
-            const lf = document.getElementById('stack-lifo-container'); lf.innerHTML = '';
-            if(app.restokStack.length === 0) lf.innerHTML = `<p class="text-slate-500 italic text-xs">Belum ada histori pergerakan stok.</p>`;
+            if (!response.ok) throw new Error('Gagal menyimpan data.');
             
-            app.restokStack.forEach(x => {
-                const isM = x.tipe === 'MASUK';
-                const isDel = x.tipe === 'DIHAPUS';
-                
-                const borderColor = isM ? 'border-green-500' : 'border-red-500';
-                const bgColor = isM ? 'bg-green-500' : 'bg-red-500';
-                const textColor = isM ? 'text-green-400' : 'text-red-400';
-                const sign = isDel ? '[HAPUS]' : (isM ? '+' : '-');
-
-                lf.innerHTML += `<div class="relative pl-6 border-l-2 ${borderColor} pb-4"><div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-slate-900 ${bgColor}"></div><span class="block text-[10px] text-slate-400 font-bold uppercase mb-1">${x.tanggal} ${x.waktu}</span><span class="text-sm font-black ${textColor}">${sign} ${x.qty} ${x.nama}</span></div>`;
-            });
-        },
+            ui.closeStokModal();
+            await this.load(); // Refresh data dari server
+            alert('Data berhasil disimpan!');
+        } catch (error) {
+            console.error(error);
+            alert('Terjadi kesalahan saat menyimpan data.');
+        }
+    },
             
     renderSelects() {
         // FIX: Menghapus manipulasi .innerHTML ke elemen 'antrian-motor-id' karena sekarang bertipe input hidden (Autocomplete)
