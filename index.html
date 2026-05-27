@@ -108,27 +108,32 @@
         <!-- DASHBOARD -->
         <section id="dashboard" class="page-section active">
             <h2 class="text-3xl font-black text-slate-800 mb-8">Statistik Bengkel</h2>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Total Motor Servis</span>
-                    <span class="text-4xl font-black text-slate-800" id="stat-motor">0</span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Total Servis</span>
+                    <span class="text-3xl font-black text-slate-800" id="stat-motor">0</span>
                 </div>
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Menunggu Antrian</span>
-                    <span class="text-4xl font-black text-amber-500" id="stat-antrian">0</span>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Menunggu</span>
+                    <span class="text-3xl font-black text-amber-500" id="stat-antrian">0</span>
                 </div>
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Sedang Proses</span>
-                    <span class="text-4xl font-black text-blue-600" id="stat-proses">0</span>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Diproses</span>
+                    <span class="text-3xl font-black text-blue-600" id="stat-proses">0</span>
                 </div>
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Selesai Servis</span>
-                    <span class="text-4xl font-black text-green-600" id="stat-selesai">0</span>
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Selesai</span>
+                    <span class="text-3xl font-black text-green-600" id="stat-selesai">0</span>
                 </div>
-                <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Total Pembelian</span>
-                    <span class="text-4xl font-black text-emerald-500" id="stat-pembelian">0</span>
+                <div class="bg-red-50 p-5 rounded-3xl border border-red-100 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                    <i class="fa-solid fa-triangle-exclamation absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-red-100"></i>
+                    <span class="text-red-400 font-bold text-[10px] uppercase mb-1 relative z-10">Stok Kritis (<5)</span>
+                    <span class="text-3xl font-black text-red-600 relative z-10" id="stat-stok-kritis">0</span>
+                </div>
+                <div class="bg-emerald-50 p-5 rounded-3xl border border-emerald-100 shadow-sm flex flex-col justify-center relative overflow-hidden">
+                    <i class="fa-solid fa-rupiah-sign absolute right-4 top-1/2 -translate-y-1/2 text-4xl text-emerald-100"></i>
+                    <span class="text-emerald-500 font-bold text-[10px] uppercase mb-1 relative z-10">Pendapatan Hari Ini</span>
+                    <span class="text-xl font-black text-emerald-700 relative z-10" id="stat-pendapatan">Rp 0</span>
                 </div>
             </div>
             
@@ -329,9 +334,34 @@
                         <!-- Header with Search -->
                         <div class="p-6 border-b border-slate-50 flex flex-wrap justify-between items-center gap-4 bg-slate-50/30">
                             <h3 class="font-bold text-slate-800">Daftar Inventaris</h3>
-                            <div class="relative w-full sm:w-auto">
-                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                <input type="text" id="search-stok" oninput="ui.renderStok()" placeholder="Cari kode unik atau nama barang..." class="pl-11 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm w-full sm:w-72 font-medium transition-all shadow-sm">
+                            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                                <select id="filter-kategori-stok" onchange="ui.renderStok()" class="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-medium shadow-sm cursor-pointer">
+                                    <option value="">Semua Kategori</option>
+                                    <!-- Core & Performa -->
+                                    <option value="Sistem Mesin Utama">Sistem Mesin Utama</option>
+                                    <option value="Sistem Transmisi CVT (Matic)">Sistem Transmisi CVT (Matic)</option>
+                                    <option value="Sistem Transmisi Manual/Kopling">Sistem Transmisi Manual/Kopling</option>
+                                    <option value="Sistem Bahan Bakar & Udara">Sistem Bahan Bakar & Udara</option>
+                                    <option value="Sistem Pendingin Mesin">Sistem Pendingin Mesin</option>
+                                    <option value="Sistem Pembuangan (Knalpot)">Sistem Pembuangan (Knalpot)</option>
+                                    <!-- Maintenance -->
+                                    <option value="Sistem Pelumas & Cairan Perawatan">Sistem Pelumas & Cairan Perawatan</option>
+                                    <!-- Kelistrikan -->
+                                    <option value="Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
+                                    <option value="Pencahayaan & Indikator">Pencahayaan & Indikator</option>
+                                    <option value="Sistem Kemudi & Kontrol (Kabel/Gas)">Sistem Kemudi & Kontrol (Kabel/Gas)</option>
+                                    <!-- Kaki-Kaki -->
+                                    <option value="Sistem Pengereman">Sistem Pengereman</option>
+                                    <option value="Sistem Suspensi (Shockbreaker)">Sistem Suspensi (Shockbreaker)</option>
+                                    <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
+                                    <!-- Eksterior -->
+                                    <option value="Bodi, Rangka & Eksterior">Bodi, Rangka & Eksterior</option>
+                                    <option value="Aksesoris, Modifikasi & Variasi">Aksesoris, Modifikasi & Variasi</option>
+                                </select>
+                                <div class="relative w-full sm:w-auto">
+                                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                    <input type="text" id="search-stok" oninput="ui.renderStok()" placeholder="Cari kode atau nama..." class="pl-11 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm w-full sm:w-64 font-medium transition-all shadow-sm">
+                                </div>
                             </div>
                         </div>
                         <!-- Table -->

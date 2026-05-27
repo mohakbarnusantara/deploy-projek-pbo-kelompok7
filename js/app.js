@@ -257,8 +257,7 @@ const app = {
             });
 
             // FIX: Mengirim x.kategori_barang ke constructor SukuCadang
-            this.parts = (pRes || []).map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part, x.kategori_barang));
-
+            this.parts = (pRes || []).map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part, x.kategori)); // <-- Tambahkan x.kategori di paling ujung    
             this.riwayat = (tRes || []).map(t => {
                 const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
                 const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
@@ -644,29 +643,47 @@ const ui = {
     renderAll() { this.renderDash(); this.renderMotors(); this.renderAntrian(); this.renderStok(); this.renderSelects(); this.renderCart(); },
     
     renderDash() {
-        const sH = app.riwayat.filter(r => r.motor.plat !== '-');
-        const dH = app.riwayat.filter(r => r.motor.plat === '-');
-        const uM = new Set(sH.map(r => r.motor.plat));
-        
-        document.getElementById('stat-motor').innerText = uM.size;
-        document.getElementById('stat-antrian').innerText = app.antrian.filter(a=>a.status === 'ANTRIAN').length;
-        document.getElementById('stat-proses').innerText = app.antrian.filter(a=>a.status === 'PROSES').length;
-        document.getElementById('stat-selesai').innerText = sH.length;
-        document.getElementById('stat-pembelian').innerText = dH.length;
+            const sH = app.riwayat.filter(r => r.motor.plat !== '-');
+            const dH = app.riwayat.filter(r => r.motor.plat === '-');
+            const uM = new Set(sH.map(r => r.motor.plat));
+            
+            // === AWAL LANGKAH 3: Hitung Otomatis Pendapatan Hari Ini ===
+            const hariIniStr = new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
+            const pendapatanHariIni = app.riwayat.reduce((sum, trx) => {
+                // Jika string formatWaktu transaksi mengandung tanggal hari ini (contoh: 28/05/2026)
+                if (trx.formatWaktu.includes(hariIniStr)) {
+                    return sum + trx.hitungTotal();
+                }
+                return sum;
+            }, 0);
+            // === AKHIR LANGKAH 3 ===
 
-        const tbS = document.getElementById('table-recent-servis'); tbS.innerHTML = '';
-        if(sH.length === 0) tbS.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
-        sH.slice(0,10).forEach(r => {
-            tbS.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 font-black uppercase text-center">${r.motor.plat}</td><td class="px-6 py-4 font-bold text-slate-500 capitalize text-center">${r.motor.pemilik}</td><td class="px-6 py-4 font-black text-blue-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-green-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
-        });
+            // Hitung Total Item Suku Cadang yang Stok Kritis (< 5)
+            const stokKritis = app.parts.filter(p => p.stok < 5).length;
+            
+            // Sinkronisasi data ke elemen-elemen HTML di Dasbor Anda
+            document.getElementById('stat-motor').innerText = uM.size;
+            document.getElementById('stat-antrian').innerText = app.antrian.filter(a=>a.status === 'ANTRIAN').length;
+            document.getElementById('stat-proses').innerText = app.antrian.filter(a=>a.status === 'PROSES').length;
+            document.getElementById('stat-selesai').innerText = sH.length;
+            document.getElementById('stat-stok-kritis').innerText = stokKritis; // <-- Menulis ke card stok kritis Anda
+            document.getElementById('stat-pendapatan').innerText = app.formatRp.format(pendapatanHariIni); // <-- Menulis ke card pendapatan hari ini
 
-        const tbD = document.getElementById('table-direct-purchase'); tbD.innerHTML = '';
-        if(dH.length === 0) tbD.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
-        dH.slice(0,10).forEach(r => {
-            const iN = r.parts.map(p => p.nama).join(', ');
-            tbD.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 max-w-[200px] truncate text-center">${iN}</td><td class="px-6 py-4 font-black text-emerald-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-emerald-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
-        });
-    },
+            // Render Tabel Aktivitas Servis Terbaru
+            const tbS = document.getElementById('table-recent-servis'); tbS.innerHTML = '';
+            if(sH.length === 0) tbS.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
+            sH.slice(0,10).forEach(r => {
+                tbS.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 font-black uppercase text-center">${r.motor.plat}</td><td class="px-6 py-4 font-bold text-slate-500 capitalize text-center">${r.motor.pemilik}</td><td class="px-6 py-4 font-black text-blue-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-green-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
+            });
+
+            // Render Tabel Pembelian Suku Cadang Langsung
+            const tbD = document.getElementById('table-direct-purchase'); tbD.innerHTML = '';
+            if(dH.length === 0) tbD.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
+            dH.slice(0,10).forEach(r => {
+                const iN = r.parts.map(p => p.nama).join(', ');
+                tbD.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 max-w-[200px] truncate text-center">${iN}</td><td class="px-6 py-4 font-black text-emerald-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-emerald-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
+            });
+        },
             
     renderMotors() {
         const tb = document.getElementById('table-motor-data');
@@ -713,38 +730,49 @@ const ui = {
     },
 
     renderStok() {
-        const tb = document.getElementById('table-stok-data'); tb.innerHTML = '';
-        const searchEl = document.getElementById('search-stok');
-        const keyword = searchEl ? searchEl.value.toLowerCase() : '';
-        const role = app.currentUserRole;
-
-        const filteredParts = app.parts.filter(p => p.nama.toLowerCase().includes(keyword) || (p.kode && p.kode.toLowerCase().includes(keyword)));
-        if(filteredParts.length === 0) tb.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">Suku cadang tidak ditemukan.</td></tr>`;
-
-        filteredParts.forEach(p => {
-            const lw = p.stok < 5;
-            let actionBtns = (role === 'admin' || role === 'gudang') 
-                ? `<button onclick="app.editPart('${p.id}')" class="text-blue-500 hover:scale-110"><i class="fa-solid fa-pen"></i></button><button onclick="ui.openStokModal('${p.id}','${p.nama}')" class="text-green-600 hover:scale-110"><i class="fa-solid fa-plus"></i></button><button onclick="app.hapusPart('${p.id}')" class="text-red-500 hover:scale-110"><i class="fa-solid fa-trash"></i></button>`
-                : `<span class="text-[10px] font-black text-slate-300 italic uppercase">Hanya Lihat</span>`;
-
-            tb.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="px-6 py-4"><span class="text-[10px] font-black text-slate-400 block mb-0.5 tracking-wider">${p.kode}</span><span class="font-bold text-slate-700">${p.nama}</span></td><td class="px-6 py-4 text-center font-black ${lw ? 'text-red-500 bg-red-50 rounded-xl' : 'text-slate-800'}">${p.stok}</td><td class="px-6 py-4 text-right font-bold text-blue-600">${app.formatRp.format(p.harga)}</td><td class="px-6 py-4 text-center flex justify-center items-center gap-3 pt-6">${actionBtns}</td></tr>`;
-        });
-
-        const lf = document.getElementById('stack-lifo-container'); lf.innerHTML = '';
-        if(app.restokStack.length === 0) lf.innerHTML = `<p class="text-slate-500 italic text-xs">Belum ada histori pergerakan stok.</p>`;
-        
-        app.restokStack.forEach(x => {
-            const isM = x.tipe === 'MASUK';
-            const isDel = x.tipe === 'DIHAPUS';
+            const tb = document.getElementById('table-stok-data'); tb.innerHTML = '';
+            const searchEl = document.getElementById('search-stok');
+            const keyword = searchEl ? searchEl.value.toLowerCase() : '';
             
-            const borderColor = isM ? 'border-green-500' : 'border-red-500';
-            const bgColor = isM ? 'bg-green-500' : 'bg-red-500';
-            const textColor = isM ? 'text-green-400' : 'text-red-400';
-            const sign = isDel ? '[HAPUS]' : (isM ? '+' : '-');
+            // Ambil nilai filter kategori dari dropdown HTML
+            const filterEl = document.getElementById('filter-kategori-stok');
+            const kategoriFilter = filterEl ? filterEl.value : '';
+            
+            const role = app.currentUserRole;
 
-            lf.innerHTML += `<div class="relative pl-6 border-l-2 ${borderColor} pb-4"><div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-slate-900 ${bgColor}"></div><span class="block text-[10px] text-slate-400 font-bold uppercase mb-1">${x.tanggal} ${x.waktu}</span><span class="text-sm font-black ${textColor}">${sign} ${x.qty} ${x.nama}</span></div>`;
-        });
-    },
+            // Lakukan penyaringan ganda: berdasarkan text pencarian DAN kategori barang
+            const filteredParts = app.parts.filter(p => {
+                const matchSearch = p.nama.toLowerCase().includes(keyword) || (p.kode && p.kode.toLowerCase().includes(keyword));
+                const matchKategori = kategoriFilter === '' || p.kategori === kategoriFilter;
+                return matchSearch && matchKategori;
+            });
+
+            if(filteredParts.length === 0) tb.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 italic">Suku cadang tidak ditemukan.</td></tr>`;
+
+            filteredParts.forEach(p => {
+                const lw = p.stok < 5;
+                let actionBtns = (role === 'admin' || role === 'gudang') 
+                    ? `<button onclick="app.editPart('${p.id}')" class="text-blue-500 hover:scale-110"><i class="fa-solid fa-pen"></i></button><button onclick="ui.openStokModal('${p.id}','${p.nama}')" class="text-green-600 hover:scale-110"><i class="fa-solid fa-plus"></i></button><button onclick="app.hapusPart('${p.id}')" class="text-red-500 hover:scale-110"><i class="fa-solid fa-trash"></i></button>`
+                    : `<span class="text-[10px] font-black text-slate-300 italic uppercase">Hanya Lihat</span>`;
+
+                tb.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="px-6 py-4"><span class="text-[10px] font-black text-slate-400 block mb-0.5 tracking-wider">${p.kode}</span><span class="font-bold text-slate-700">${p.nama}</span> <span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded ml-1 uppercase border border-slate-200">${p.kategori || 'UMUM'}</span></td><td class="px-6 py-4 text-center font-black ${lw ? 'text-red-500 bg-red-50 rounded-xl' : 'text-slate-800'}">${p.stok}</td><td class="px-6 py-4 text-right font-bold text-blue-600">${app.formatRp.format(p.harga)}</td><td class="px-6 py-4 text-center flex justify-center items-center gap-3 pt-6">${actionBtns}</td></tr>`;
+            });
+
+            const lf = document.getElementById('stack-lifo-container'); lf.innerHTML = '';
+            if(app.restokStack.length === 0) lf.innerHTML = `<p class="text-slate-500 italic text-xs">Belum ada histori pergerakan stok.</p>`;
+            
+            app.restokStack.forEach(x => {
+                const isM = x.tipe === 'MASUK';
+                const isDel = x.tipe === 'DIHAPUS';
+                
+                const borderColor = isM ? 'border-green-500' : 'border-red-500';
+                const bgColor = isM ? 'bg-green-500' : 'bg-red-500';
+                const textColor = isM ? 'text-green-400' : 'text-red-400';
+                const sign = isDel ? '[HAPUS]' : (isM ? '+' : '-');
+
+                lf.innerHTML += `<div class="relative pl-6 border-l-2 ${borderColor} pb-4"><div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-slate-900 ${bgColor}"></div><span class="block text-[10px] text-slate-400 font-bold uppercase mb-1">${x.tanggal} ${x.waktu}</span><span class="text-sm font-black ${textColor}">${sign} ${x.qty} ${x.nama}</span></div>`;
+            });
+        },
             
     renderSelects() {
         // FIX: Menghapus manipulasi .innerHTML ke elemen 'antrian-motor-id' karena sekarang bertipe input hidden (Autocomplete)
