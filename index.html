@@ -274,14 +274,32 @@
                         <div class="w-40">
                             <label class="text-[10px] font-bold text-slate-400 block mb-1">Kategori Barang</label>
                             <select id="part-kategori" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-semibold text-sm text-slate-700 cursor-pointer">
-                                <option value="">-- Pilih Kategori --</option>
-                                <option value="Oli & Pelumas">Oli & Pelumas</option>
-                                <option value="Ban & Velg">Ban & Velg</option>
-                                <option value="Sparepart Mesin">Sparepart Mesin</option>
-                                <option value="Pengereman">Pengereman</option>
-                                <option value="Kelistrikan">Kelistrikan</option>
-                                <option value="Aksesoris">Aksesoris</option>
-                                <option value="Lain-lain">Lain-lain</option>
+                                <option value="">-- Pilih Kategori Detail --</option>
+                                <optgroup label="Core & Performa">
+                                    <option value="Sistem Mesin Utama">Sistem Mesin Utama</option>
+                                    <option value="Sistem Transmisi CVT">Sistem Transmisi CVT (Matic)</option>
+                                    <option value="Sistem Transmisi Manual">Sistem Transmisi Manual/Kopling</option>
+                                    <option value="Sistem Bahan Bakar & Udara">Sistem Bahan Bakar & Udara</option>
+                                    <option value="Sistem Pendingin Mesin">Sistem Pendingin Mesin</option>
+                                    <option value="Sistem Pembuangan">Sistem Pembuangan (Knalpot)</option>
+                                </optgroup>
+                                <optgroup label="Maintenance & Cairan">
+                                    <option value="Sistem Pelumas & Perawatan">Sistem Pelumas & Cairan Perawatan</option>
+                                </optgroup>
+                                <optgroup label="Kelistrikan & Kontrol">
+                                    <option value="Sistem Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
+                                    <option value="Sistem Pencahayaan & Indikator">Pencahayaan & Indikator</option>
+                                    <option value="Sistem Kemudi & Kontrol">Sistem Kemudi & Kontrol (Kabel/Gas)</option>
+                                </optgroup>
+                                <optgroup label="Kaki-Kaki & Pengereman">
+                                    <option value="Sistem Pengereman">Sistem Pengereman</option>
+                                    <option value="Sistem Suspensi">Sistem Suspensi (Shockbreaker)</option>
+                                    <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
+                                </optgroup>
+                                <optgroup label="Eksterior & Variasi">
+                                    <option value="Bodi, Rangka & Eksterior">Bodi, Rangka & Eksterior</option>
+                                    <option value="Aksesoris & Variasi">Aksesoris, Modifikasi & Variasi</option>
+                                </optgroup>
                             </select>
                         </div>
                         <input type="hidden" id="part-id-edit">

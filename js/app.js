@@ -31,6 +31,7 @@ class SukuCadang extends EntitasBase {
         super(id);
         this.kode = kode || 'SP-' + Math.floor(Math.random() * 9000 + 1000).toString();
         this.nama = nama;
+        this.kategori = kategori || '-';
         this._stok = parseInt(stok);
         this._harga = parseInt(harga);
     }
@@ -496,6 +497,7 @@ const app = {
         document.getElementById('part-harga').value = p.harga;
         document.getElementById('btn-save-part').innerText = "Update";
         document.getElementById('btn-cancel-part').classList.remove('hidden');
+        document.getElementById('part-kategori').value = p.kategori || '';
     },
 
     async hapusPart(id) { 
