@@ -236,7 +236,16 @@
                     <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Daftarkan Antrian Baru</h3>
                     <form onsubmit="app.handleAntrianSubmit(event)">
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Motor</label>
-                        <select id="antrian-motor-id" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none focus:ring-2 focus:ring-blue-500 font-bold"></select>
+                        <div class="relative mb-6">
+                            <input type="hidden" id="antrian-motor-id" required>
+                            
+                            <input type="text" id="antrian-motor-search" autocomplete="off" 
+                                class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
+                                placeholder="Ketik min. 2 huruf Plat atau Pemilik...">
+                            
+                            <div id="antrian-motor-dropdown" class="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 max-h-56 overflow-y-auto hidden">
+                                </div>
+                        </div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Keluhan Pelanggan</label>
                         <textarea id="antrian-keluhan" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none focus:border-blue-500 h-32" placeholder="Ganti oli, rem blong, dll..."></textarea>
                         <button type="submit" class="w-full bg-slate-800 text-white font-black py-4 rounded-xl hover:bg-slate-900 shadow-xl transition-all">Masukkan ke Antrian</button>

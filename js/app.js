@@ -89,6 +89,7 @@ const app = {
         await this.load(); 
         this.startClock();
         ui.renderAll();
+        this.setupAutocomplete();
 
         // 1. VALIDASI REAL-TIME INPUT (Auto-Format)
         const namaInput = document.getElementById('motor-pemilik');
@@ -135,6 +136,77 @@ const app = {
         setInterval(update, 1000);
         update();
     },
+
+    // Tambahkan fungsi ini di dalam object 'app' (misalnya di bawah fungsi startClock)
+    setupAutocomplete() {
+        const searchInput = document.getElementById('antrian-motor-search');
+        const hiddenInput = document.getElementById('antrian-motor-id');
+        const dropdown = document.getElementById('antrian-motor-dropdown');
+
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            // 1. Normalisasi Input: Ubah ke huruf kecil & hilangkan spasi berlebih
+            const keyword = e.target.value.toLowerCase().trim();
+
+            // Reset ID tersembunyi jika input dihapus/diubah kasir
+            hiddenInput.value = '';
+
+            // 2. Kriteria: Baru aktif setelah 2 karakter
+            if (keyword.length < 2) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            // 3. Filter Data
+            const filteredMotors = this.motors.filter(m => {
+                // Syarat A: Motor harus "Ready" (Bukan di Antrian atau Proses)
+                const isReady = m.statusTerakhir !== 'PROSES' && m.statusTerakhir !== 'ANTRIAN';
+                
+                // Syarat B: Plat ATAU Pemilik mengandung kata kunci (Case Insensitive)
+                const matchPlat = (m.plat || '').toLowerCase().includes(keyword);
+                const matchPemilik = (m.pemilik || '').toLowerCase().includes(keyword);
+
+                return isReady && (matchPlat || matchPemilik);
+            });
+
+            // 4. Render Hasil ke Dropdown
+            dropdown.innerHTML = '';
+            
+            if (filteredMotors.length === 0) {
+                // Jika tidak ada yang cocok
+                dropdown.innerHTML = `<div class="p-4 text-sm text-slate-400 italic text-center font-bold">Data tidak ditemukan</div>`;
+            } else {
+                // Jika ada yang cocok, buat list yang bisa diklik
+                filteredMotors.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = "p-4 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors";
+                    div.innerHTML = `
+                        <div class="font-black text-slate-800 uppercase">${m.plat}</div>
+                        <div class="text-xs text-slate-500 font-bold capitalize">Milik: ${m.pemilik}</div>
+                    `;
+                    
+                    // Aksi ketika Kasir memilih motor
+                    div.onclick = () => {
+                        hiddenInput.value = m.id; // Simpan ID asli
+                        searchInput.value = `${m.plat} (${m.pemilik})`; // Tampilkan teks yang rapi
+                        dropdown.classList.add('hidden'); // Tutup dropdown
+                    };
+                    dropdown.appendChild(div);
+                });
+            }
+            dropdown.classList.remove('hidden');
+        });
+
+        // Fitur tambahan UX: Tutup dropdown jika kasir klik di area luar
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    },
+
+
 
     // --- FITUR LOGIN ---
     handleLogin(e) {
@@ -327,7 +399,8 @@ const app = {
                     data: { vehicle_id: motorId, keluhan: keluhan, nomor_urut: nomor } 
                 })
             });
-            e.target.reset(); 
+            e.target.reset();
+            document.getElementById('antrian-motor-id').value = ''; // Mengosongkan ID motor
             await this.load(); 
         } catch (error) { console.error(error); }
     },
