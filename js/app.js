@@ -27,7 +27,8 @@ class Motor extends EntitasBase {
 }
 
 class SukuCadang extends EntitasBase {
-    constructor(nama, stok, harga, id=null, kode=null) {
+    // FIX: Menambahkan parameter kategori ke dalam constructor
+    constructor(nama, stok, harga, id=null, kode=null, kategori=null) {
         super(id);
         this.kode = kode || 'SP-' + Math.floor(Math.random() * 9000 + 1000).toString();
         this.nama = nama;
@@ -100,26 +101,22 @@ const app = {
         const hargaInput = document.getElementById('part-harga');
         const restokQtyInput = document.getElementById('restok-qty');
 
-        // Validasi Nama Pemilik (Hapus karakter aneh saat mengetik, lalu format saat selesai)
         if (namaInput) {
             namaInput.addEventListener('input', function() {
-                this.value = this.value.replace(/[^a-zA-Z\s.,']/g, ''); // Hanya alfabet, spasi, ., '
+                this.value = this.value.replace(/[^a-zA-Z\s.,']/g, ''); 
                 const errLabel = document.getElementById('err-nama');
                 if(errLabel) errLabel.classList.add('hidden');
             });
             namaInput.addEventListener('blur', function() {
-                // Saat selesai mengetik: Hapus spasi ganda & buat Title Case
                 this.value = this.value.replace(/\s+/g, ' ').trim().replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
             });
         }
 
-        // Validasi Plat Nomor (Otomatis kapital & hapus spasi berlebih)
         if (platInput) {
             platInput.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
             platInput.addEventListener('blur', function() { this.value = this.value.replace(/\s+/g, ' ').trim(); });
         }
 
-        // Cegah Minus
         if (jasaInput) jasaInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; ui.renderCart(); });
         if (stokInput) stokInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
         if (hargaInput) hargaInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
@@ -138,7 +135,6 @@ const app = {
         update();
     },
 
-    // Tambahkan fungsi ini di dalam object 'app' (misalnya di bawah fungsi startClock)
     setupAutocomplete() {
         const searchInput = document.getElementById('antrian-motor-search');
         const hiddenInput = document.getElementById('antrian-motor-id');
@@ -147,38 +143,26 @@ const app = {
         if (!searchInput) return;
 
         searchInput.addEventListener('input', (e) => {
-            // 1. Normalisasi Input: Ubah ke huruf kecil & hilangkan spasi berlebih
             const keyword = e.target.value.toLowerCase().trim();
-
-            // Reset ID tersembunyi jika input dihapus/diubah kasir
             hiddenInput.value = '';
 
-            // 2. Kriteria: Baru aktif setelah 2 karakter
             if (keyword.length < 2) {
                 dropdown.classList.add('hidden');
                 return;
             }
 
-            // 3. Filter Data
             const filteredMotors = this.motors.filter(m => {
-                // Syarat A: Motor harus "Ready" (Bukan di Antrian atau Proses)
                 const isReady = m.statusTerakhir !== 'PROSES' && m.statusTerakhir !== 'ANTRIAN';
-                
-                // Syarat B: Plat ATAU Pemilik mengandung kata kunci (Case Insensitive)
                 const matchPlat = (m.plat || '').toLowerCase().includes(keyword);
                 const matchPemilik = (m.pemilik || '').toLowerCase().includes(keyword);
-
                 return isReady && (matchPlat || matchPemilik);
             });
 
-            // 4. Render Hasil ke Dropdown
             dropdown.innerHTML = '';
             
             if (filteredMotors.length === 0) {
-                // Jika tidak ada yang cocok
                 dropdown.innerHTML = `<div class="p-4 text-sm text-slate-400 italic text-center font-bold">Data tidak ditemukan</div>`;
             } else {
-                // Jika ada yang cocok, buat list yang bisa diklik
                 filteredMotors.forEach(m => {
                     const div = document.createElement('div');
                     div.className = "p-4 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors";
@@ -187,11 +171,10 @@ const app = {
                         <div class="text-xs text-slate-500 font-bold capitalize">Milik: ${m.pemilik}</div>
                     `;
                     
-                    // Aksi ketika Kasir memilih motor
                     div.onclick = () => {
-                        hiddenInput.value = m.id; // Simpan ID asli
-                        searchInput.value = `${m.plat} (${m.pemilik})`; // Tampilkan teks yang rapi
-                        dropdown.classList.add('hidden'); // Tutup dropdown
+                        hiddenInput.value = m.id; 
+                        searchInput.value = `${m.plat} (${m.pemilik})`; 
+                        dropdown.classList.add('hidden'); 
                     };
                     dropdown.appendChild(div);
                 });
@@ -199,7 +182,6 @@ const app = {
             dropdown.classList.remove('hidden');
         });
 
-        // Fitur tambahan UX: Tutup dropdown jika kasir klik di area luar
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.classList.add('hidden');
@@ -207,9 +189,6 @@ const app = {
         });
     },
 
-
-
-    // --- FITUR LOGIN ---
     handleLogin(e) {
         e.preventDefault();
         const u = document.getElementById('log-user').value;
@@ -248,7 +227,6 @@ const app = {
         ui.nav('dashboard');
     },
 
-    // --- INTEGRASI CORE CLOUD ---
     async load() {
         try {
             const [mRes, pRes, qRes, tRes, lRes] = await Promise.all([
@@ -259,9 +237,9 @@ const app = {
                 fetch('/api/getData?table=logs').then(r => r.json())
             ]);
 
+            // FIX: Mengambil data tahun dari database dinamis, bukan hardcode 2026
             this.motors = (mRes || []).map(x => { 
-                const m = new Motor(x.plat_nomor, x.merk, x.model, x.pemilik, 2026, x.id);
-                return m;
+                return new Motor(x.plat_nomor, x.merk, x.model, x.pemilik, x.tahun || 2026, x.id);
             });
 
             this.antrian = (qRes || []).map(q => {
@@ -278,7 +256,8 @@ const app = {
                 }
             });
 
-            this.parts = (pRes || []).map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part));
+            // FIX: Mengirim x.kategori_barang ke constructor SukuCadang
+            this.parts = (pRes || []).map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part, x.kategori_barang));
 
             this.riwayat = (tRes || []).map(t => {
                 const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
@@ -307,7 +286,6 @@ const app = {
         } catch (e) { console.error("Error Deleting Data:", e); }
     },
 
-    // --- MANAJEMEN MOTOR (Dengan Validasi Penuh) ---
     async handleMotorSubmit(e) {
         e.preventDefault();
         
@@ -318,7 +296,6 @@ const app = {
         let pemilik = document.getElementById('motor-pemilik').value; 
         const tahun = document.getElementById('motor-tahun').value;
 
-        // Validasi Final sebelum di push ke server
         plat = plat.replace(/\s+/g, ' ').trim().toUpperCase();
         pemilik = pemilik.replace(/\s+/g, ' ').trim();
         
@@ -331,7 +308,6 @@ const app = {
             return alert("GAGAL: Nama pemilik mengandung karakter yang dilarang.");
         }
 
-        // Title Case
         pemilik = pemilik.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
         const btn = document.getElementById('btn-save-motor');
@@ -348,8 +324,6 @@ const app = {
             });
             
             const result = await response.json();
-            
-            // Tangkap Error 400 (Plat Duplikat)
             if (!response.ok) {
                 throw new Error(result.error || "Gagal menyimpan data motor ke server.");
             }
@@ -383,12 +357,12 @@ const app = {
         if(confirm("Hapus data motor ini permanen dari database?")) await this.deleteData('Vehicles', id); 
     },
 
-    // --- MANAJEMEN ANTREAN ---
     async handleAntrianSubmit(e) {
         e.preventDefault();
         const motorId = document.getElementById('antrian-motor-id').value;
         const keluhan = document.getElementById('antrian-keluhan').value;
         
+        if(!motorId) return alert("Silakan ketik dan pilih motor terlebih dahulu!");
         if(this.antrian.find(a => a.motorId == motorId && a.status != 'SELESAI')) return alert("Motor sudah dalam antrean!");
         const nomor = this.antrian.length + 1;
 
@@ -401,7 +375,7 @@ const app = {
                 })
             });
             e.target.reset();
-            document.getElementById('antrian-motor-id').value = ''; // Mengosongkan ID motor
+            document.getElementById('antrian-motor-id').value = ''; 
             await this.load(); 
         } catch (error) { console.error(error); }
     },
@@ -421,28 +395,24 @@ const app = {
         } catch (error) { console.error(error); }
     },
 
-    // --- MANAJEMEN SPAREPART & INVENTORY LOGS ---
     async handlePartSubmit() {
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
         
         const id = document.getElementById('part-id-edit').value;
         const kodeInput = document.getElementById('part-kode').value.toUpperCase();
         const n = document.getElementById('part-nama').value.trim();
-        const kategori = document.getElementById('part-kategori').value; // Ambil nilai dropdown
+        const kategori = document.getElementById('part-kategori').value; 
         const s = parseInt(document.getElementById('part-stok').value); 
         const h = parseInt(document.getElementById('part-harga').value);
               
-        // VALIDASI 1: Cek Kategori Barang
         if (!kategori) {
             return alert('Silakan pilih kategori barang terlebih dahulu.');
         }
 
-        // VALIDASI 2: Cek Harga (Mencegah Rp 0 atau Negatif)
         if (isNaN(h) || h < 100) {
             return alert('Harga suku cadang tidak boleh Rp 0. Silakan masukkan harga yang valid minimal Rp 100.');
         }
 
-        // VALIDASI 3: Cek Nama & Stok Minimal
         if(!n || isNaN(s) || s < 0) {
             return alert("Lengkapi form nama barang, dan pastikan stok minimal 0!");
         }
@@ -453,8 +423,6 @@ const app = {
         btn.disabled = true;
 
         try {
-            // Catatan: Jika Anda ingin menyimpan kategori ke database,
-            // pastikan Anda menambahkan 'kategori: kategori' pada payload body di bawah ini.
             await fetch('/api/manageData', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -463,7 +431,6 @@ const app = {
                 })
             });
 
-            // Logika Inventory Log
             if(id) {
                 const idx = this.parts.findIndex(p => p.id == id);
                 if(idx !== -1) {
@@ -495,9 +462,9 @@ const app = {
         document.getElementById('part-nama').value = p.nama;
         document.getElementById('part-stok').value = p.stok;
         document.getElementById('part-harga').value = p.harga;
+        document.getElementById('part-kategori').value = p.kategori || '';
         document.getElementById('btn-save-part').innerText = "Update";
         document.getElementById('btn-cancel-part').classList.remove('hidden');
-        document.getElementById('part-kategori').value = p.kategori || '';
     },
 
     async hapusPart(id) { 
@@ -543,7 +510,6 @@ const app = {
         } catch (error) { console.error(error); }
     },
 
-    // --- MANAJEMEN KASIR & TRANSAKSI ---
     toggleKasirMode() {
         const isP = document.getElementById('kasir-parts-only').checked;
         const mS = document.getElementById('kasir-motor-id'), dS = document.getElementById('kasir-deskripsi'), jI = document.getElementById('kasir-jasa');
@@ -781,8 +747,7 @@ const ui = {
     },
             
     renderSelects() {
-        const sa = document.getElementById('antrian-motor-id'); sa.innerHTML = '<option value="">-- Pilih Motor --</option>';
-        app.motors.filter(m => m.statusTerakhir !== 'PROSES' && m.statusTerakhir !== 'ANTRIAN').forEach(m => sa.innerHTML += `<option value="${m.id}">${m.getInfo()} (Milik: ${m.pemilik})</option>`);
+        // FIX: Menghapus manipulasi .innerHTML ke elemen 'antrian-motor-id' karena sekarang bertipe input hidden (Autocomplete)
                 
         const sk = document.getElementById('kasir-motor-id'); sk.innerHTML = '<option value="">-- Pilih Motor Process --</option>';
         app.antrian.filter(a => a.status === 'PROSES').forEach(n => { const m = app.motors.find(x => x.id == n.motorId); if(m) sk.innerHTML += `<option value="${m.id}">#${n.nomor} | ${m.getInfo()}</option>`; });
@@ -815,7 +780,7 @@ const ui = {
         document.getElementById('part-id-edit').value = ''; 
         document.getElementById('part-kode').value = ''; 
         document.getElementById('part-nama').value = ''; 
-        document.getElementById('part-kategori').value = ''; // Reset Kategori
+        document.getElementById('part-kategori').value = ''; 
         document.getElementById('part-stok').value = ''; 
         document.getElementById('part-harga').value = ''; 
         document.getElementById('btn-save-part').innerText = "Tambah"; 

@@ -4,28 +4,23 @@ module.exports = async (req, res) => {
   const { action, table, data } = req.body;
   
   try {
-    // 1. Logika HAPUS (DELETE)
     if (action === 'delete') {
       await db.query(`DELETE FROM ${table} WHERE id = $1`, [data.id]);
       return res.status(200).json({ message: 'Data berhasil dihapus' });
     } 
     
-    // 2. Logika UPDATE STATUS ANTREAN
     else if (action === 'update_queue_status') {
       await db.query('UPDATE Queues SET status = $1 WHERE id = $2', [data.status, data.id]);
       return res.status(200).json({ message: 'Status antrean berhasil diupdate' });
     } 
     
-    // 3. Logika UPDATE STOK SUKU CADANG
     else if (action === 'update_part_stock') {
       await db.query('UPDATE Parts SET stok = stok + $1 WHERE id = $2', [data.qty, data.id]);
       return res.status(200).json({ message: 'Stok berhasil disesuaikan' });
     } 
     
-    // 4. Logika TAMBAH / UPDATE FORMS (ADD / EDIT)
     else if (action === 'add') {
       
-      // LOGIKA KENDARAAN
       if (table === 'Vehicles') {
         const platNormalized = data.plat_nomor.replace(/\s+/g, ' ').trim().toUpperCase();
         const namaNormalized = data.pemilik.replace(/\s+/g, ' ').trim().replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
@@ -49,17 +44,18 @@ module.exports = async (req, res) => {
           if(vRes.rows.length > 0) {
               const cId = vRes.rows[0].customer_id;
               await db.query('UPDATE Customers SET nama = $1 WHERE id = $2', [namaNormalized, cId]);
-              await db.query('UPDATE Vehicles SET plat_nomor = $1, merk = $2, model = $3 WHERE id = $4', [platNormalized, data.merk, data.model, data.id]);
+              // FIX: Menambahkan kolom tahun ke operasi UPDATE SQL
+              await db.query('UPDATE Vehicles SET plat_nomor = $1, merk = $2, model = $3, tahun = $4 WHERE id = $5', [platNormalized, data.merk, data.model, data.tahun, data.id]);
           }
         } else {
           const custRes = await db.query('INSERT INTO Customers (nama) VALUES ($1) RETURNING id', [namaNormalized]);
           const customerId = custRes.rows[0].id;
-          await db.query('INSERT INTO Vehicles (plat_nomor, merk, model, customer_id) VALUES ($1, $2, $3, $4)', 
-            [platNormalized, data.merk, data.model, customerId]);
+          // FIX: Menambahkan kolom tahun ke operasi INSERT SQL
+          await db.query('INSERT INTO Vehicles (plat_nomor, merk, model, customer_id, tahun) VALUES ($1, $2, $3, $4, $5)', 
+            [platNormalized, data.merk, data.model, customerId, data.tahun]);
         }
       } 
       
-      // LOGIKA TRANSAKSI
       else if (table === 'Transactions') {
         const { plat, nama, deskripsi, jasa, total, parts } = data;
         await db.query(
@@ -68,28 +64,21 @@ module.exports = async (req, res) => {
         );
       } 
       
-      // LOGIKA ANTREAN
       else if (table === 'Queues') {
         await db.query('INSERT INTO Queues (vehicle_id, keluhan, nomor_urut) VALUES ($1, $2, $3)', 
           [data.vehicle_id, data.keluhan, data.nomor_urut]);
       }
       
-      // ==========================================
-      // LOGIKA PARTS / SUKU CADANG (YANG DIUBAH)
-      // ==========================================
       else if (table === 'Parts') {
         if (data.id) { 
-          // Mode Update Barang Lama (Tambahan kategori_barang)
           await db.query('UPDATE Parts SET kode_part = $1, nama_part = $2, stok = $3, harga = $4, kategori_barang = $5 WHERE id = $6',
             [data.kode, data.nama, data.stok, data.harga, data.kategori, data.id]);
         } else { 
-          // Mode Tambah Barang Baru (Tambahan kategori_barang)
           await db.query('INSERT INTO Parts (kode_part, nama_part, stok, harga, kategori_barang) VALUES ($1, $2, $3, $4, $5)',
             [data.kode, data.nama, data.stok, data.harga, data.kategori]);
         }
       }
       
-      // LOGIKA INVENTORY LOGS
       else if (table === 'InventoryLogs') {
         await db.query('INSERT INTO InventoryLogs (nama_part, qty, tipe, waktu, tanggal) VALUES ($1, $2, $3, $4, $5)',
           [data.nama, data.qty, data.tipe, data.waktu, data.tanggal]);
