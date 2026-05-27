@@ -89,6 +89,22 @@ const app = {
         await this.load(); 
         this.startClock();
         ui.renderAll();
+
+        // FIX BUG: Cegah minus di berbagai input Form
+        const jasaInput = document.getElementById('kasir-jasa');
+        const stokInput = document.getElementById('part-stok');
+        const hargaInput = document.getElementById('part-harga');
+        const restokQtyInput = document.getElementById('restok-qty');
+
+        if (jasaInput) {
+            jasaInput.addEventListener('input', function() {
+                if (this.value < 0) this.value = 0;
+                ui.renderCart(); 
+            });
+        }
+        if (stokInput) stokInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
+        if (hargaInput) hargaInput.addEventListener('input', function() { if (this.value < 0) this.value = 0; });
+        if (restokQtyInput) restokQtyInput.addEventListener('input', function() { if (this.value < 1) this.value = 1; });
     },
 
     startClock() {
@@ -153,13 +169,11 @@ const app = {
                 fetch('/api/getData?table=logs').then(r => r.json())
             ]);
 
-            // Mapping Motors
             this.motors = (mRes || []).map(x => { 
                 const m = new Motor(x.plat_nomor, x.merk, x.model, x.pemilik, 2026, x.id);
                 return m;
             });
 
-            // Mapping Queues & Sinkronisasi Status Motor
             this.antrian = (qRes || []).map(q => {
                 const a = new AntrianItem(q.vehicle_id, q.keluhan, q.nomor_urut);
                 a.id = q.id; a.status = q.status;
@@ -174,10 +188,8 @@ const app = {
                 }
             });
 
-            // Mapping Parts
             this.parts = (pRes || []).map(x => new SukuCadang(x.nama_part, x.stok, x.harga, x.id, x.kode_part));
 
-            // Mapping Transactions
             this.riwayat = (tRes || []).map(t => {
                 const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
                 const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
@@ -187,7 +199,6 @@ const app = {
                 return trx;
             });
 
-            // Mapping Logs
             this.restokStack = (lRes || []).map(l => ({
                 nama: l.nama_part, qty: l.qty, tipe: l.tipe, waktu: l.waktu, tanggal: l.tanggal
             }));
@@ -294,11 +305,13 @@ const app = {
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
         const id = document.getElementById('part-id-edit').value, 
               kodeInput = document.getElementById('part-kode').value.toUpperCase(),
-              n = document.getElementById('part-nama').value, 
-              s = parseInt(document.getElementById('part-stok').value), 
-              h = document.getElementById('part-harga').value;
+              n = document.getElementById('part-nama').value;
+        
+        // FIX BUG: Paksa konversi ke integer agar tidak ada error string, dan blokir nilai negatif
+        const s = parseInt(document.getElementById('part-stok').value); 
+        const h = parseInt(document.getElementById('part-harga').value);
               
-        if(!n || isNaN(s) || !h) return alert("Lengkapi form nama, stok, dan harga!");
+        if(!n || isNaN(s) || isNaN(h) || s < 0 || h < 0) return alert("Lengkapi form nama, stok (minimal 0), dan harga (minimal 0)!");
         
         try {
             await fetch('/api/manageData', {
@@ -309,7 +322,6 @@ const app = {
                 })
             });
 
-            // Handle Logging otomatis
             if(id) {
                 const idx = this.parts.findIndex(p => p.id == id);
                 if(idx !== -1) {
@@ -341,14 +353,21 @@ const app = {
 
     async hapusPart(id) { 
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
-        if(confirm("Hapus item?")) await this.deleteData('Parts', id); 
+        if(confirm("Hapus item secara permanen dari Gudang?")) {
+            const p = this.parts.find(x => x.id == id);
+            if (p) {
+                // FIX BUG: Kirim log dulu sebelum di delete dari database
+                await this.pushInventoryLog(p.nama, p.stok, 'DIHAPUS');
+                await this.deleteData('Parts', id);
+            }
+        } 
     },
 
     async prosesRestok() {
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
         const id = document.getElementById('restok-id').value, qty = parseInt(document.getElementById('restok-qty').value);
         const p = this.parts.find(x => x.id == id);
-        if(!p) return;
+        if(!p || qty < 1) return;
 
         try {
             await fetch('/api/manageData', {
@@ -394,7 +413,7 @@ const app = {
 
     tambahKeKeranjang() {
         const id = document.getElementById('kasir-pilih-part').value, qty = parseInt(document.getElementById('kasir-qty').value);
-        if(!id) return;
+        if(!id || qty < 1) return;
         const pF = this.parts.find(x => x.id == id), ex = this.cart.find(c => c.id == id), tot = ex ? (ex.qty + qty) : qty;
         if(pF.stok < tot) return alert("Stok kurang di Gudang!");
         if(ex) { ex.qty += qty; } else { this.cart.push(new ItemKeranjang(pF.id, pF.nama, qty, pF.harga)); }
@@ -409,8 +428,10 @@ const app = {
         const isP = document.getElementById('kasir-parts-only').checked;
         const mId = document.getElementById('kasir-motor-id').value;
         const dsk = document.getElementById('kasir-deskripsi').value;
-        const jsa = parseInt(document.getElementById('kasir-jasa').value) || 0;
-        const totalSemua = parseInt(document.getElementById('kasir-total-display').innerText.replace(/\D/g, ''));
+        
+        const jsa = Math.max(0, parseInt(document.getElementById('kasir-jasa').value) || 0);
+        const totalParts = this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+        const totalSemua = jsa + totalParts;
 
         if(!isP && !mId) return alert("Pilih motor yang sedang diproses!");
         if(this.cart.length === 0 && jsa === 0) return alert("Keranjang belanja kosong!");
@@ -433,7 +454,6 @@ const app = {
         btn.innerText = "Memproses Transaksi..."; btn.disabled = true;
 
         try {
-            // 1. Simpan Transaksi
             await fetch('/api/manageData', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -442,7 +462,6 @@ const app = {
                 })
             });
 
-            // 2. Potong Stok Gudang & Catat Log (Satu persatu)
             for (let item of this.cart) {
                 await fetch('/api/manageData', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -451,7 +470,6 @@ const app = {
                 await this.pushInventoryLog(item.nama, item.qty, 'KELUAR');
             }
 
-            // 3. Selesaikan Antrean (Jika ada)
             if (antrianIdTarget) {
                 await fetch('/api/manageData', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -459,11 +477,9 @@ const app = {
                 });
             }
 
-            // 4. Siapkan Struk untuk Cetak
             const trxUntukCetak = new TransaksiServis(trxMotorInfo, new Date().toISOString(), dsk, jsa, [...this.cart], "BARU");
             trxUntukCetak.hitungTotal = () => totalSemua;
 
-            // 5. Bersihkan Form & Refresh
             this.cart = []; 
             e.target.reset(); 
             document.getElementById('kasir-parts-only').checked = false; 
@@ -600,11 +616,21 @@ const ui = {
             tb.innerHTML += `<tr class="border-b hover:bg-slate-50 transition-all"><td class="px-6 py-4"><span class="text-[10px] font-black text-slate-400 block mb-0.5 tracking-wider">${p.kode}</span><span class="font-bold text-slate-700">${p.nama}</span></td><td class="px-6 py-4 text-center font-black ${lw ? 'text-red-500 bg-red-50 rounded-xl' : 'text-slate-800'}">${p.stok}</td><td class="px-6 py-4 text-right font-bold text-blue-600">${app.formatRp.format(p.harga)}</td><td class="px-6 py-4 text-center flex justify-center items-center gap-3 pt-6">${actionBtns}</td></tr>`;
         });
 
+        // FIX BUG: Tampilan Log Terbalik & Hapus Barang
         const lf = document.getElementById('stack-lifo-container'); lf.innerHTML = '';
         if(app.restokStack.length === 0) lf.innerHTML = `<p class="text-slate-500 italic text-xs">Belum ada histori pergerakan stok.</p>`;
-        [...app.restokStack].reverse().forEach(x => {
+        
+        // Menghapus .reverse() karena data dari API (DESC) sudah terbaru di urutan pertama
+        app.restokStack.forEach(x => {
             const isM = x.tipe === 'MASUK';
-            lf.innerHTML += `<div class="relative pl-6 border-l-2 ${isM?'border-green-500':'border-red-500'} pb-4"><div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-slate-900 ${isM?'bg-green-500':'bg-red-500'}"></div><span class="block text-[10px] text-slate-400 font-bold uppercase mb-1">${x.tanggal} ${x.waktu}</span><span class="text-sm font-black ${isM?'text-green-400':'text-red-400'}">${isM?'+':'-'}${x.qty} ${x.nama}</span></div>`;
+            const isDel = x.tipe === 'DIHAPUS';
+            
+            const borderColor = isM ? 'border-green-500' : 'border-red-500';
+            const bgColor = isM ? 'bg-green-500' : 'bg-red-500';
+            const textColor = isM ? 'text-green-400' : 'text-red-400';
+            const sign = isDel ? '[HAPUS]' : (isM ? '+' : '-');
+
+            lf.innerHTML += `<div class="relative pl-6 border-l-2 ${borderColor} pb-4"><div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 border-slate-900 ${bgColor}"></div><span class="block text-[10px] text-slate-400 font-bold uppercase mb-1">${x.tanggal} ${x.waktu}</span><span class="text-sm font-black ${textColor}">${sign} ${x.qty} ${x.nama}</span></div>`;
         });
     },
             
@@ -626,7 +652,11 @@ const ui = {
         } else {
             app.cart.forEach(it => { c.innerHTML += `<div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-2"><div><span class="font-bold text-slate-700 text-sm block">${it.nama}</span><span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-black">x${it.qty}</span></div><div class="flex items-center gap-4"><span class="font-black text-slate-800">${app.formatRp.format(it.subtotal)}</span><button type="button" onclick="app.hapusItemCart('${it.id}')" class="text-red-400 hover:bg-red-500 hover:text-white p-2 rounded-xl"><i class="fa-solid fa-trash"></i></button></div></div>`; });
         }
-        let t = app.cart.reduce((s,i)=>s+i.subtotal, 0) + parseInt(document.getElementById('kasir-jasa').value || 0);
+        
+        let jsa = parseInt(document.getElementById('kasir-jasa').value) || 0;
+        if(jsa < 0) jsa = 0; // Proteksi ekstra
+        
+        let t = app.cart.reduce((s,i)=>s+i.subtotal, 0) + jsa;
         document.getElementById('kasir-total-display').innerText = app.formatRp.format(t);
     },
 
@@ -682,7 +712,7 @@ const ui = {
         const isP = tr.motor.plat === '-';
         tr.parts.forEach(p => it += `<tr style="border-bottom:1px dashed #ccc;"><td style="padding:6px 0;">${p.nama} <br><small>x${p.qty}</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td></tr>`);
         let hH = isP ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
-        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
+        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;\">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style=\"text-align:right;\">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
         a.classList.remove('hidden'); setTimeout(() => { window.print(); a.innerHTML = ''; a.classList.add('hidden'); }, 500);
     }
 };

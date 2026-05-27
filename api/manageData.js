@@ -59,7 +59,6 @@ module.exports = async (req, res) => {
       return res.status(201).json({ message: 'Data berhasil disimpan' });
     } 
     
-    // Jika Action tidak ditemukan
     else {
       return res.status(400).json({ error: 'Aksi API tidak valid' });
     }
