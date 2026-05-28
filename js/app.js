@@ -616,30 +616,30 @@ const app = {
         document.getElementById('part-stok').value = p.stok;
         document.getElementById('part-harga').value = p.harga;
         
-        // --- LOGIKA PINTAR UNTUK MENCARI KATEGORI ---
+        // --- LOGIKA PINTAR PENCOCOKAN KATEGORI ---
         const catSelect = document.getElementById('part-kategori');
         catSelect.value = p.kategori || ''; // Coba pasangkan secara normal dulu
         
-        // Jika tidak ketemu (karena beda tulisan di DB dan HTML), cari kemiripan katanya
+        // Jika gagal (karena teks DB dan HTML beda), cari manual
         if (catSelect.value === '' && p.kategori) {
+            const dbCat = p.kategori.toLowerCase().trim();
+            
             for (let i = 0; i < catSelect.options.length; i++) {
                 const optVal = catSelect.options[i].value.toLowerCase();
                 const optText = catSelect.options[i].text.toLowerCase();
-                const dbCat = p.kategori.toLowerCase();
                 
-                // Jika salah satu kata saling mengandung (contoh: "Lampu" ada di "Sistem Lampu")
-                if (optVal.includes(dbCat) || optText.includes(dbCat) || dbCat.includes(optText) || dbCat.includes(optVal)) {
+                // Cek apakah string dari DB cocok dengan teks atau value di HTML
+                if (optVal === dbCat || optText === dbCat || optVal.includes(dbCat) || dbCat.includes(optText)) {
                     catSelect.selectedIndex = i;
-                    break;
+                    break; 
                 }
             }
         }
-        // ---------------------------------------------
-
+        
         document.getElementById('btn-save-part').innerText = "Update";
         document.getElementById('btn-cancel-part').classList.remove('hidden');
     },
-    
+
     async hapusPart(id) { 
         if(this.currentUserRole === 'kasir') return alert("Akses Ditolak!");
         if(confirm("Hapus item secara permanen dari Gudang?")) {
