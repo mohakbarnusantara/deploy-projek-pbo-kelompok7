@@ -450,7 +450,15 @@
                                     <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px]">2</span> Keranjang Belanja
                                 </h3>
                                 <div class="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4 md:mb-6">
-                                    <select id="kasir-pilih-part" class="w-full sm:flex-1 p-3 md:p-3.5 bg-custom-light border border-slate-200 rounded-xl text-xs md:text-sm font-bold outline-none focus:border-custom-teal"></select>
+                                    <div class="relative w-full sm:flex-1">
+                                        <input type="hidden" id="kasir-pilih-part">
+                                        
+                                        <input type="text" id="kasir-search-part" autocomplete="off" placeholder="-- Cari / Ketik Suku Cadang --" class="w-full p-3 md:p-3.5 bg-custom-light border border-slate-200 rounded-xl text-xs md:text-sm font-bold outline-none focus:border-custom-teal focus:ring-1 focus:ring-custom-teal transition-all">
+                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                                        
+                                        <div id="kasir-part-dropdown" class="absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-1 max-h-60 overflow-y-auto hidden">
+                                        </div>
+                                    </div>
                                     <div class="flex gap-2">
                                         <input type="number" id="kasir-qty" value="1" min="1" class="w-20 p-3 md:p-3.5 bg-custom-light border border-slate-200 rounded-xl font-black text-center outline-none text-sm focus:border-custom-teal">
                                         <button type="button" onclick="app.tambahKeKeranjang()" class="flex-1 sm:flex-none bg-custom-darkest text-white px-6 rounded-xl font-bold hover:bg-custom-dark active:scale-95 transition-all text-sm md:text-base">Add</button>

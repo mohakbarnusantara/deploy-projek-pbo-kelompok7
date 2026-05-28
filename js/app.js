@@ -106,6 +106,7 @@ const app = {
         this.startClock();
         ui.renderAll();
         this.setupAutocomplete();
+        this.setupPartAutocomplete();
 
         // EVENT-DRIVEN 2: Smart Refresh saat Tab Browser kembali difokuskan
         // Jika kasir kembali ke tab aplikasi setelah membuka aplikasi lain, data otomatis ditarik
@@ -207,6 +208,63 @@ const app = {
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.classList.add('hidden');
+            }
+        });
+    },
+
+    setupPartAutocomplete() {
+        const searchInput = document.getElementById('kasir-search-part');
+        const hiddenInput = document.getElementById('kasir-pilih-part');
+        const dropdown = document.getElementById('kasir-part-dropdown');
+
+        if (!searchInput) return;
+
+        const renderDropdown = (keyword = '') => {
+            dropdown.innerHTML = '';
+            const filteredParts = this.parts.filter(p => 
+                p.nama.toLowerCase().includes(keyword.toLowerCase()) || 
+                (p.kode && p.kode.toLowerCase().includes(keyword.toLowerCase()))
+            );
+
+            if (filteredParts.length === 0) {
+                dropdown.innerHTML = `<div class="p-4 text-sm text-slate-400 italic text-center font-bold">Suku cadang tidak ditemukan</div>`;
+            } else {
+                filteredParts.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = "p-3 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors";
+                    div.innerHTML = `
+                        <div class="font-bold text-custom-darkest text-sm">${p.nama}</div>
+                        <div class="text-xs text-custom-teal font-black mt-1">[${p.kode}] - ${this.formatRp.format(p.harga)} <span class="text-slate-400 font-medium">| Stok: ${p.stok}</span></div>
+                    `;
+                    
+                    div.onclick = () => {
+                        hiddenInput.value = p.id; 
+                        searchInput.value = `${p.nama} (${this.formatRp.format(p.harga)})`; 
+                        dropdown.classList.add('hidden'); 
+                    };
+                    dropdown.appendChild(div);
+                });
+            }
+        };
+
+        // Buka list semua part saat input diklik
+        searchInput.addEventListener('focus', () => {
+            renderDropdown('');
+            dropdown.classList.remove('hidden');
+        });
+
+        // Filter list otomatis saat mengetik
+        searchInput.addEventListener('input', (e) => {
+            renderDropdown(e.target.value);
+            dropdown.classList.remove('hidden');
+            hiddenInput.value = ''; // Kosongkan ID jika diketik manual
+        });
+
+        // Tutup jika klik di luar elemen
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+                if (!hiddenInput.value) searchInput.value = ''; // Reset jika invalid
             }
         });
     },
@@ -561,10 +619,18 @@ const app = {
 
     tambahKeKeranjang() {
         const id = document.getElementById('kasir-pilih-part').value, qty = parseInt(document.getElementById('kasir-qty').value);
-        if(!id || qty < 1) return;
+        if(!id || qty < 1) return alert("Pilih suku cadang dari daftar terlebih dahulu!");
+        
         const pF = this.parts.find(x => x.id == id), ex = this.cart.find(c => c.id == id), tot = ex ? (ex.qty + qty) : qty;
         if(pF.stok < tot) return alert("Stok kurang di Gudang!");
+        
         if(ex) { ex.qty += qty; } else { this.cart.push(new ItemKeranjang(pF.id, pF.nama, qty, pF.harga)); }
+        
+        // --- Reset form inputan setelah berhasil Add ---
+        document.getElementById('kasir-pilih-part').value = '';
+        document.getElementById('kasir-search-part').value = '';
+        document.getElementById('kasir-qty').value = 1;
+        
         ui.renderCart();
     },
 
@@ -821,11 +887,14 @@ const ui = {
     },
             
     renderSelects() {
-        const sk = document.getElementById('kasir-motor-id'); sk.innerHTML = '<option value="">-- Pilih Motor Process --</option>';
-        app.antrian.filter(a => a.status === 'PROSES').forEach(n => { const m = app.motors.find(x => x.id == n.motorId); if(m) sk.innerHTML += `<option value="${m.id}">#${n.nomor} | ${m.getInfo()}</option>`; });
-                
-        const sp = document.getElementById('kasir-pilih-part'); sp.innerHTML = '<option value="">-- Cari Suku Cadang --</option>';
-        app.parts.forEach(p => sp.innerHTML += `<option value="${p.id}">${p.getInfo()} (${app.formatRp.format(p.harga)})</option>`);
+        const sk = document.getElementById('kasir-motor-id'); 
+        if (sk) {
+            sk.innerHTML = '<option value="">-- Pilih Motor Process --</option>';
+            app.antrian.filter(a => a.status === 'PROSES').forEach(n => { 
+                const m = app.motors.find(x => x.id == n.motorId); 
+                if(m) sk.innerHTML += `<option value="${m.id}">#${n.nomor} | ${m.getInfo()}</option>`; 
+            });
+        }
     },
 
     renderCart() {
