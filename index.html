@@ -269,15 +269,21 @@
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
                     <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm h-fit">
                         <h3 class="font-bold text-custom-darkest mb-4 md:mb-6 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-custom-teal"></i> Daftarkan Antrian Baru</h3>
-                        <form onsubmit="app.handleAntrianSubmit(event)">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Motor</label>
+                        <form onsubmit="app.handleAntrianSubmit(event)">             
                             <div class="relative mb-4 md:mb-6">
                                 <input type="hidden" id="antrian-motor-id" required>
-                                
-                                <input type="text" id="antrian-motor-search" autocomplete="off" 
-                                    class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-custom-teal font-bold text-sm md:text-base" 
-                                    placeholder="Ketik min. 2 huruf Plat...">
-                                
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Motor</label>
+                                <div class="relative mb-4 md:mb-6">
+                                    <input type="hidden" id="antrian-motor-id" required>
+                                    
+                                    <input type="text" id="antrian-motor-search" autocomplete="off" 
+                                        class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-custom-teal font-bold text-sm md:text-base cursor-pointer" 
+                                        placeholder="-- Cari / Ketik Plat Motor --">
+                                    <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                                    
+                                    <div id="antrian-motor-dropdown" class="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 max-h-56 overflow-y-auto hidden">
+                                    </div>
+                                </div>
                                 <div id="antrian-motor-dropdown" class="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 max-h-56 overflow-y-auto hidden">
                                 </div>
                             </div>
@@ -311,7 +317,7 @@
                             <div class="w-full md:w-40">
                                 <label class="text-[10px] font-bold text-slate-400 block mb-1">Kategori Barang</label>
                                 <select id="part-kategori" class="w-full p-3 bg-custom-light border border-slate-200 rounded-xl outline-none focus:border-custom-teal font-semibold text-xs md:text-sm text-custom-darkest cursor-pointer">
-                                    <option value="">-- Kategori --</option>
+                                    <option value="">Kategori</option>
                                     <optgroup label="Core & Performa">
                                         <option value="Sistem Mesin Utama">Sistem Mesin</option>
                                         <option value="Sistem Transmisi CVT">CVT (Matic)</option>
@@ -416,6 +422,7 @@
                 <h2 class="text-2xl md:text-3xl font-black text-custom-darkest mb-6 md:mb-8">Penyelesaian Servis & Kasir</h2>
                 <form onsubmit="app.handleTransaksiSubmit(event)">
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10">
+                        
                         <div class="bg-white p-5 md:p-8 rounded-3xl border border-slate-200 shadow-sm h-fit">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-100 pb-4 mb-4 md:mb-6 gap-3">
                                 <h3 class="font-bold text-custom-darkest flex items-center gap-3 text-xs md:text-sm uppercase tracking-widest">
@@ -430,20 +437,32 @@
                             <div class="space-y-4">
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase">Pilih Motor (Status PROSES)</label>
-                                        <select id="kasir-motor-id" onchange="app.handleKasirMotorChange()" required class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl mt-1 outline-none focus:border-custom-teal font-bold text-custom-primary text-sm md:text-base"></select>                                </div>
+                                    <div class="relative mt-1">
+                                        <input type="hidden" id="kasir-motor-id" required>
+                                        <input type="text" id="kasir-motor-search" autocomplete="off" placeholder="-- Cari Motor (Status Proses) --" class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl outline-none focus:border-custom-teal focus:ring-1 focus:ring-custom-teal font-bold text-custom-primary text-sm md:text-base transition-all cursor-pointer">
+                                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                                        <div id="kasir-motor-dropdown" class="absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-1 max-h-60 overflow-y-auto hidden"></div>
+                                    </div>
+                                </div>
+                                
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase">Hasil Pengerjaan</label>
                                     <textarea id="kasir-deskripsi" required class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl mt-1 outline-none h-20 md:h-24 text-sm md:text-base" placeholder="Detail hasil servis..."></textarea>
                                 </div>
+                                
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                                     <div>
                                         <label class="text-[10px] font-bold text-slate-400 uppercase">Tanggal & Jam</label>
                                         <input type="datetime-local" id="kasir-tanggal" required class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl mt-1 outline-none font-medium text-sm md:text-base">
                                     </div>
-                                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Biaya Jasa (Rp)</label><input type="number" id="kasir-jasa" value="0" required class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl mt-1 font-black text-custom-primary text-base md:text-lg outline-none"></div>
+                                    <div>
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Biaya Jasa (Rp)</label>
+                                        <input type="number" id="kasir-jasa" value="0" required class="w-full p-3 md:p-4 bg-custom-light border border-slate-200 rounded-xl mt-1 font-black text-custom-primary text-base md:text-lg outline-none">
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
                         <div class="flex flex-col gap-6 md:gap-8">
                             <div class="bg-white p-5 md:p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-full min-h-[400px] md:min-h-[450px]">
                                 <h3 class="font-bold text-custom-darkest mb-4 md:mb-6 flex items-center gap-3 border-b border-slate-100 pb-4 text-xs md:text-sm uppercase tracking-widest">
@@ -452,21 +471,20 @@
                                 <div class="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4 md:mb-6">
                                     <div class="relative w-full sm:flex-1">
                                         <input type="hidden" id="kasir-pilih-part">
-                                        
                                         <input type="text" id="kasir-search-part" autocomplete="off" placeholder="-- Cari / Ketik Suku Cadang --" class="w-full p-3 md:p-3.5 bg-custom-light border border-slate-200 rounded-xl text-xs md:text-sm font-bold outline-none focus:border-custom-teal focus:ring-1 focus:ring-custom-teal transition-all">
                                         <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
-                                        
-                                        <div id="kasir-part-dropdown" class="absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-1 max-h-60 overflow-y-auto hidden">
-                                        </div>
+                                        <div id="kasir-part-dropdown" class="absolute z-30 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-1 max-h-60 overflow-y-auto hidden"></div>
                                     </div>
                                     <div class="flex gap-2">
                                         <input type="number" id="kasir-qty" value="1" min="1" class="w-20 p-3 md:p-3.5 bg-custom-light border border-slate-200 rounded-xl font-black text-center outline-none text-sm focus:border-custom-teal">
                                         <button type="button" onclick="app.tambahKeKeranjang()" class="flex-1 sm:flex-none bg-custom-darkest text-white px-6 rounded-xl font-bold hover:bg-custom-dark active:scale-95 transition-all text-sm md:text-base">Add</button>
                                     </div>
                                 </div>
+                                
                                 <div id="cart-container" class="flex-1 space-y-2 mb-4 md:mb-6 min-h-[120px] overflow-y-auto bg-slate-50/50 p-2 md:p-3 rounded-2xl border-dashed border-2 border-slate-200">
                                     <p class="text-center text-slate-400 py-6 md:py-10 italic text-xs md:text-sm font-medium">Belum ada item ditambahkan.</p>
                                 </div>
+                                
                                 <div class="pt-4 md:pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
                                     <div class="text-center sm:text-left">
                                         <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-widest">Total Bayar</p>
@@ -476,6 +494,7 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </form>
             </section>

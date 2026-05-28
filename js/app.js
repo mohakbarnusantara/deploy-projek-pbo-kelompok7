@@ -107,6 +107,7 @@ const app = {
         ui.renderAll();
         this.setupAutocomplete();
         this.setupPartAutocomplete();
+        this.setupKasirMotorAutocomplete();
 
         // EVENT-DRIVEN 2: Smart Refresh saat Tab Browser kembali difokuskan
         // Jika kasir kembali ke tab aplikasi setelah membuka aplikasi lain, data otomatis ditarik
@@ -165,24 +166,17 @@ const app = {
 
         if (!searchInput) return;
 
-        searchInput.addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase().trim();
-            hiddenInput.value = '';
-
-            if (keyword.length < 2) {
-                dropdown.classList.add('hidden');
-                return;
-            }
-
+        const renderDropdown = (keyword = '') => {
+            dropdown.innerHTML = '';
+            
+            // Filter motor yang sedang tidak diantrikan / diproses
             const filteredMotors = this.motors.filter(m => {
                 const isReady = m.statusTerakhir !== 'PROSES' && m.statusTerakhir !== 'ANTRIAN';
-                const matchPlat = (m.plat || '').toLowerCase().includes(keyword);
-                const matchPemilik = (m.pemilik || '').toLowerCase().includes(keyword);
+                const matchPlat = (m.plat || '').toLowerCase().includes(keyword.toLowerCase());
+                const matchPemilik = (m.pemilik || '').toLowerCase().includes(keyword.toLowerCase());
                 return isReady && (matchPlat || matchPemilik);
             });
 
-            dropdown.innerHTML = '';
-            
             if (filteredMotors.length === 0) {
                 dropdown.innerHTML = `<div class="p-4 text-sm text-slate-400 italic text-center font-bold">Data tidak ditemukan</div>`;
             } else {
@@ -190,8 +184,8 @@ const app = {
                     const div = document.createElement('div');
                     div.className = "p-4 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors";
                     div.innerHTML = `
-                        <div class="font-black text-slate-800 uppercase">${m.plat}</div>
-                        <div class="text-xs text-slate-500 font-bold capitalize">Milik: ${m.pemilik}</div>
+                        <div class="font-black text-custom-darkest uppercase">${m.plat}</div>
+                        <div class="text-xs text-custom-teal font-bold capitalize">Milik: ${m.pemilik}</div>
                     `;
                     
                     div.onclick = () => {
@@ -202,12 +196,26 @@ const app = {
                     dropdown.appendChild(div);
                 });
             }
+        };
+
+        // Buka list saat diklik (sekarang bisa langsung scroll tanpa harus ngetik)
+        searchInput.addEventListener('focus', () => {
+            renderDropdown('');
             dropdown.classList.remove('hidden');
         });
 
+        // Filter otomatis saat mulai mengetik
+        searchInput.addEventListener('input', (e) => {
+            renderDropdown(e.target.value);
+            dropdown.classList.remove('hidden');
+            hiddenInput.value = ''; 
+        });
+
+        // Tutup list jika mengeklik di luar area
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.classList.add('hidden');
+                if (!hiddenInput.value) searchInput.value = '';
             }
         });
     },
@@ -265,6 +273,74 @@ const app = {
             if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.classList.add('hidden');
                 if (!hiddenInput.value) searchInput.value = ''; // Reset jika invalid
+            }
+        });
+    },
+
+    setupKasirMotorAutocomplete() {
+        const searchInput = document.getElementById('kasir-motor-search');
+        const hiddenInput = document.getElementById('kasir-motor-id');
+        const dropdown = document.getElementById('kasir-motor-dropdown');
+
+        if (!searchInput) return;
+
+        const renderDropdown = (keyword = '') => {
+            dropdown.innerHTML = '';
+            
+            // Ambil hanya motor yang berstatus PROSES
+            const prosesAntrian = this.antrian.filter(a => a.status === 'PROSES');
+            
+            // Filter berdasarkan plat atau nama pemilik
+            const filtered = prosesAntrian.filter(q => {
+                const m = this.motors.find(x => x.id == q.motorId);
+                if (!m) return false;
+                const matchPlat = m.plat.toLowerCase().includes(keyword.toLowerCase());
+                const matchPemilik = m.pemilik.toLowerCase().includes(keyword.toLowerCase());
+                return matchPlat || matchPemilik;
+            });
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<div class="p-4 text-sm text-slate-400 italic text-center font-bold">Tidak ada motor diproses</div>`;
+            } else {
+                filtered.forEach(q => {
+                    const m = this.motors.find(x => x.id == q.motorId);
+                    if (!m) return;
+                    
+                    const div = document.createElement('div');
+                    div.className = "p-3 border-b border-slate-100 hover:bg-blue-50 cursor-pointer transition-colors";
+                    div.innerHTML = `
+                        <div class="font-bold text-custom-darkest text-sm">#${q.nomor} | ${m.plat}</div>
+                        <div class="text-xs text-custom-teal font-black mt-1">${m.pemilik} <span class="text-slate-400 font-medium">(${m.merk} ${m.tipe})</span></div>
+                    `;
+                    
+                    div.onclick = () => {
+                        hiddenInput.value = m.id; 
+                        searchInput.value = `#${q.nomor} | ${m.plat} - ${m.pemilik}`; 
+                        dropdown.classList.add('hidden'); 
+                        this.handleKasirMotorChange(); // Trigger agar deskripsi keluhan otomatis terisi
+                    };
+                    dropdown.appendChild(div);
+                });
+            }
+        };
+
+        searchInput.addEventListener('focus', () => {
+            if(searchInput.disabled) return; // Jangan buka jika mode "Beli Suku Cadang Saja" aktif
+            renderDropdown('');
+            dropdown.classList.remove('hidden');
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            renderDropdown(e.target.value);
+            dropdown.classList.remove('hidden');
+            hiddenInput.value = ''; 
+            this.handleKasirMotorChange(); // Bersihkan deskripsi jika input tidak valid
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+                if (!hiddenInput.value) searchInput.value = ''; 
             }
         });
     },
@@ -467,8 +543,11 @@ const app = {
             await this.load(); 
             const item = this.antrian.find(a => a.id == antrianId);
             if (item) {
+                const m = this.motors.find(x => x.id == item.motorId);
                 document.getElementById('kasir-motor-id').value = item.motorId;
-                this.handleKasirMotorChange(); // Trigger agar deskripsi terisi
+                // Update tampilan teks di input pencarian
+                if (m) document.getElementById('kasir-motor-search').value = `#${item.nomor} | ${m.plat} - ${m.pemilik}`;
+                this.handleKasirMotorChange(); 
             }
         } catch (error) { console.error(error); }
     },
@@ -585,13 +664,19 @@ const app = {
 
     toggleKasirMode() {
         const isP = document.getElementById('kasir-parts-only').checked;
-        const mS = document.getElementById('kasir-motor-id'), dS = document.getElementById('kasir-deskripsi'), jI = document.getElementById('kasir-jasa');
+        const mId = document.getElementById('kasir-motor-id');
+        const mSearch = document.getElementById('kasir-motor-search'); // Gunakan search input
+        const dS = document.getElementById('kasir-deskripsi');
+        const jI = document.getElementById('kasir-jasa');
+        
         if(isP) {
-            mS.removeAttribute('required'); mS.disabled = true; mS.value = ''; mS.classList.add('bg-slate-200');
+            mId.removeAttribute('required'); mId.value = ''; 
+            mSearch.disabled = true; mSearch.value = ''; mSearch.classList.add('bg-slate-200');
             dS.removeAttribute('required'); dS.disabled = true; dS.value = 'Pembelian Langsung'; dS.classList.add('bg-slate-200');
             jI.disabled = true; jI.value = 0; jI.classList.add('bg-slate-200');
         } else {
-            mS.setAttribute('required', 'true'); mS.disabled = false; mS.classList.remove('bg-slate-200');
+            mId.setAttribute('required', 'true'); 
+            mSearch.disabled = false; mSearch.classList.remove('bg-slate-200');
             dS.setAttribute('required', 'true'); dS.disabled = false; dS.value = ''; dS.classList.remove('bg-slate-200');
             jI.disabled = false; jI.classList.remove('bg-slate-200');
         }
@@ -696,6 +781,7 @@ const app = {
 
             this.cart = []; 
             e.target.reset(); 
+            document.getElementById('kasir-motor-search').value = '';
             document.getElementById('kasir-parts-only').checked = false; 
             this.toggleKasirMode(); 
             
@@ -887,14 +973,6 @@ const ui = {
     },
             
     renderSelects() {
-        const sk = document.getElementById('kasir-motor-id'); 
-        if (sk) {
-            sk.innerHTML = '<option value="">-- Pilih Motor Process --</option>';
-            app.antrian.filter(a => a.status === 'PROSES').forEach(n => { 
-                const m = app.motors.find(x => x.id == n.motorId); 
-                if(m) sk.innerHTML += `<option value="${m.id}">#${n.nomor} | ${m.getInfo()}</option>`; 
-            });
-        }
     },
 
     renderCart() {
