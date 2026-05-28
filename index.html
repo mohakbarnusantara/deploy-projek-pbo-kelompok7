@@ -13,21 +13,24 @@
         * { font-family: 'Urbanist', sans-serif; box-sizing: border-box; }
         body { background-color: #f8fafc; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        .page-section { display: none; width: 100%; height: 100%; padding: 30px; overflow-y: auto; animation: slideIn 0.3s ease-out; }
+        /* Responsive padding untuk page section */
+        .page-section { display: none; width: 100%; height: 100%; padding: 16px; overflow-y: auto; animation: slideIn 0.3s ease-out; }
+        @media (min-width: 768px) { .page-section { padding: 32px; } }
         .page-section.active { display: block; }
+        
         @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         
         .sidebar-btn.active { background-color: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2); }
         .sidebar-btn:not(.active) { color: #94a3b8; }
         .sidebar-btn:not(.active):hover { background-color: #1e293b; color: #f8fafc; }
 
-        .status-badge { padding: 4px 10px; border-radius: 99px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-badge { padding: 4px 10px; border-radius: 99px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
         .status-antrian { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .status-proses { background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
         .status-selesai { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .status-nonaktif { background-color: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
         @media print {
@@ -39,12 +42,12 @@
         #digital-clock { font-family: monospace; letter-spacing: 1px; }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 flex">
 
-    <div id="login-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[100] flex items-center justify-center transition-all duration-500">
-        <div class="bg-white p-10 rounded-3xl shadow-2xl w-[400px] text-center border border-slate-100">
+    <div id="login-overlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[100] flex items-center justify-center transition-all duration-500 p-4">
+        <div class="bg-white p-8 md:p-10 rounded-3xl shadow-2xl w-full max-w-[400px] text-center border border-slate-100">
             <div class="flex justify-center mb-6">
-                <img src="Logo.png" alt="MotoCare Logo" class="w-24 h-24 object-contain">
+                <img src="Logo.png" alt="MotoCare Logo" class="w-20 h-20 md:w-24 md:h-24 object-contain">
             </div>
             <h2 class="text-2xl font-black text-slate-800">MotoCare Login</h2>
             <p class="text-slate-500 mb-6 mt-1 text-sm">Sistem Manajemen Bengkel</p>
@@ -59,386 +62,414 @@
         </div>
     </div>
 
-    <aside class="w-72 bg-slate-900 flex flex-col h-full shadow-2xl z-10 shrink-0">
-        <div class="p-8 flex items-center gap-4">
-            <div class="bg-white p-1 rounded-xl backdrop-blur-sm border border-white/20">
-                <img src="Logo.png" alt="Logo MotoCare" class="w-10 h-10 object-contain">
+    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 z-40 hidden transition-opacity opacity-0 md:hidden" onclick="ui.toggleSidebar()"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-slate-900 flex flex-col h-full shadow-2xl transition-transform duration-300 -translate-x-full md:relative md:translate-x-0 shrink-0">
+        <div class="p-6 md:p-8 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-white p-1 rounded-xl backdrop-blur-sm border border-white/20">
+                    <img src="Logo.png" alt="Logo MotoCare" class="w-8 h-8 md:w-10 md:h-10 object-contain">
+                </div>
+                <div>
+                    <h1 class="text-white font-black tracking-tight text-lg md:text-xl leading-tight">MOTOCARE</h1>
+                    <p id="sidebar-role-label" class="text-blue-400 text-[10px] font-bold tracking-widest uppercase">Admin System</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-white font-black tracking-tight text-xl leading-tight">MOTOCARE</h1>
-                <p id="sidebar-role-label" class="text-blue-400 text-[10px] font-bold tracking-widest uppercase">Admin System</p>
-            </div>
+            <button class="md:hidden text-slate-400 hover:text-white text-2xl" onclick="ui.toggleSidebar()">
+                <i class="fa-solid fa-times"></i>
+            </button>
         </div>
 
-        <div class="px-8 pb-4 mb-4 border-b border-slate-800">
-            <div id="digital-clock" class="text-blue-400 font-bold text-2xl">00:00:00</div>
+        <div class="px-6 md:px-8 pb-4 mb-4 border-b border-slate-800">
+            <div id="digital-clock" class="text-blue-400 font-bold text-xl md:text-2xl">00:00:00</div>
             <div id="current-date" class="text-slate-500 text-[10px] font-bold uppercase mt-1">1 Januari 2026</div>
         </div>
 
-        <nav class="flex-1 px-4 py-4 space-y-3">
-            <button id="btn-nav-dashboard" onclick="ui.nav('dashboard')" class="sidebar-btn active w-full flex items-center gap-4 p-4 rounded-xl font-bold transition-all text-sm" data-id="dashboard">
+        <nav class="flex-1 px-4 py-2 overflow-y-auto space-y-2 md:space-y-3">
+            <button id="btn-nav-dashboard" onclick="ui.nav('dashboard')" class="sidebar-btn active w-full flex items-center gap-4 p-3 md:p-4 rounded-xl font-bold transition-all text-sm" data-id="dashboard">
                 <i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i> Dashboard
             </button>
-            <button id="btn-nav-motor" onclick="ui.nav('motor')" class="sidebar-btn w-full flex items-center gap-4 p-4 rounded-xl font-bold transition-all text-sm" data-id="motor">
+            <button id="btn-nav-motor" onclick="ui.nav('motor')" class="sidebar-btn w-full flex items-center gap-4 p-3 md:p-4 rounded-xl font-bold transition-all text-sm" data-id="motor">
                 <i class="fa-solid fa-motorcycle w-5 text-center text-lg"></i> Data Motor
             </button>
-            <button id="btn-nav-antrian" onclick="ui.nav('antrian')" class="sidebar-btn w-full flex items-center gap-4 p-4 rounded-xl font-bold transition-all text-sm" data-id="antrian">
+            <button id="btn-nav-antrian" onclick="ui.nav('antrian')" class="sidebar-btn w-full flex items-center gap-4 p-3 md:p-4 rounded-xl font-bold transition-all text-sm" data-id="antrian">
                 <i class="fa-solid fa-list-check w-5 text-center text-lg"></i> Antrian Servis
             </button>
-            <button id="btn-nav-stok" onclick="ui.nav('stok')" class="sidebar-btn w-full flex items-center gap-4 p-4 rounded-xl font-bold transition-all text-sm" data-id="stok">
+            <button id="btn-nav-stok" onclick="ui.nav('stok')" class="sidebar-btn w-full flex items-center gap-4 p-3 md:p-4 rounded-xl font-bold transition-all text-sm" data-id="stok">
                 <i class="fa-solid fa-boxes-stacked w-5 text-center text-lg"></i> Gudang & Stok
             </button>
-            <button id="btn-nav-kasir" onclick="ui.nav('kasir')" class="sidebar-btn w-full flex items-center gap-4 p-4 rounded-xl font-bold transition-all text-sm" data-id="kasir">
+            <button id="btn-nav-kasir" onclick="ui.nav('kasir')" class="sidebar-btn w-full flex items-center gap-4 p-3 md:p-4 rounded-xl font-bold transition-all text-sm" data-id="kasir">
                 <i class="fa-solid fa-cash-register w-5 text-center text-lg"></i> Kasir / Transaksi
             </button>
         </nav>
-        <div class="p-6">
-            <button onclick="app.logout()" class="w-full p-4 bg-slate-800 text-red-400 font-bold rounded-xl text-sm hover:bg-red-500 hover:text-white transition-all"><i class="fa-solid fa-sign-out-alt text-lg"></i> Keluar</button>
+        <div class="p-4 md:p-6 mt-auto border-t border-slate-800">
+            <button onclick="app.logout()" class="w-full p-3 md:p-4 bg-slate-800 text-red-400 font-bold rounded-xl text-sm hover:bg-red-500 hover:text-white transition-all"><i class="fa-solid fa-sign-out-alt text-lg"></i> Keluar</button>
         </div>
     </aside>
 
-    <main class="flex-1 relative bg-slate-50 overflow-hidden text-slate-700">
+    <div class="flex-1 flex flex-col h-full overflow-hidden relative">
         
-        <section id="dashboard" class="page-section active">
-            <h2 class="text-3xl font-black text-slate-800 mb-8">Statistik Bengkel</h2>
+        <!-- Header Mobile (Hanya muncul di HP) -->
+        <header class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center z-30 shrink-0">
+            <div class="flex items-center gap-3">
+                <!-- Kotak hitam dan filter invert dihapus, ukuran logo sedikit dibesarkan -->
+                <img src="Logo.png" alt="Logo MotoCare" class="w-8 h-8 object-contain">
+                <h1 class="font-black text-slate-800 text-lg tracking-tight">MOTOCARE</h1>
+            </div>
+            <button onclick="ui.toggleSidebar()" class="text-slate-800 hover:text-blue-600 bg-slate-100 p-2 rounded-lg transition-all">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </header>
+
+        <main class="flex-1 relative bg-slate-50 overflow-hidden text-slate-700">
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Total Servis</span>
-                    <span class="text-3xl font-black text-slate-800" id="stat-motor">0</span>
-                </div>
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Menunggu</span>
-                    <span class="text-3xl font-black text-amber-500" id="stat-antrian">0</span>
-                </div>
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Diproses</span>
-                    <span class="text-3xl font-black text-blue-600" id="stat-proses">0</span>
-                </div>
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
-                    <span class="text-slate-400 font-bold text-[10px] uppercase mb-1">Selesai</span>
-                    <span class="text-3xl font-black text-green-600" id="stat-selesai">0</span>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-blue-50/30">
-                        <h3 class="font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                            <i class="fa-solid fa-tools text-blue-500"></i> Riwayat Servis Motor
-                        </h3>
+            <section id="dashboard" class="page-section active">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-6 md:mb-8">Statistik Bengkel</h2>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
+                    <div class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <span class="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase mb-1 truncate">Total Motor Servis</span>
+                        <span class="text-2xl md:text-3xl font-black text-slate-800" id="stat-motor">0</span>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b">
-                                <tr>
-                                    <th class="px-6 py-4">Waktu</th>
-                                    <th class="px-6 py-4">Plat</th>
-                                    <th class="px-6 py-4 text-center">Pemilik</th> 
-                                    <th class="px-6 py-4 text-center">Biaya</th>
-                                    <th class="px-6 py-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-recent-servis" class="text-sm font-medium"></tbody>
-                        </table>
+                    <div class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <span class="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase mb-1 truncate">Menunggu Antrian</span>
+                        <span class="text-2xl md:text-3xl font-black text-amber-500" id="stat-antrian">0</span>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <span class="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase mb-1 truncate">Sedang Proses</span>
+                        <span class="text-2xl md:text-3xl font-black text-blue-600" id="stat-proses">0</span>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <span class="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase mb-1 truncate">Selesai Servis</span>
+                        <span class="text-2xl md:text-3xl font-black text-green-600" id="stat-selesai">0</span>
+                    </div>
+                    <div class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-center col-span-2 sm:col-span-1">
+                        <span class="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase mb-1 truncate">Total Pembelian</span>
+                        <span class="text-2xl md:text-3xl font-black text-teal-500" id="stat-pembelian">0</span>
                     </div>
                 </div>
-
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-green-50/30">
-                        <h3 class="font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                            <i class="fa-solid fa-cart-shopping text-green-500"></i> Riwayat Pembelian Langsung
-                        </h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b">
-                                <tr><th class="px-6 py-4">Waktu</th><th class="px-6 py-4">Keterangan</th><th class="px-6 py-4 text-center">Total</th><th class="px-6 py-4 text-center">Aksi</th></tr>
-                            </thead>
-                            <tbody id="table-direct-purchase" class="text-sm font-medium"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="motor" class="page-section">
-            <h2 class="text-3xl font-black text-slate-800 mb-8">Data Master Motor</h2>
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
-                    <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2" id="motor-form-title"><i class="fa-solid fa-plus-circle text-blue-500"></i> Tambah Motor Baru</h3>
-                    <form id="form-motor" onsubmit="app.handleMotorSubmit(event)">
-                        <input type="hidden" id="motor-id-edit">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Plat Nomor</label>
-                                <input type="text" id="motor-plat" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 uppercase font-bold text-slate-700" placeholder="DD 2510 NX">
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-[10px] font-bold text-slate-400 uppercase">Merek</label><input type="text" id="motor-merk" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" placeholder="Honda"></div>
-                                <div><label class="text-[10px] font-bold text-slate-400 uppercase">Tipe</label><input type="text" id="motor-tipe" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" placeholder="Beat"></div>
-                            </div>
-                            <div class="relative">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Nama Pemilik</label>
-                                <input type="text" id="motor-pemilik" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" placeholder="Hanya huruf alfabet">
-                                <p id="err-nama" class="text-[10px] text-red-500 mt-1 font-bold hidden">Nama tidak boleh mengandung angka!</p>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Tahun</label>
-                                <input type="number" id="motor-tahun" required class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500" placeholder="2024">
-                            </div>
-                            <div class="flex flex-col gap-3 pt-4">
-                                <button type="submit" id="btn-save-motor" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all active:scale-95">Simpan Data</button>
-                                <button type="button" id="btn-cancel-motor" onclick="ui.resetMotorForm()" class="w-full bg-slate-100 text-slate-500 font-bold py-3.5 rounded-xl hover:bg-slate-200 hidden">Batal Edit</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-fit">
-                    <div class="p-6 border-b border-slate-50 flex flex-wrap justify-between items-center gap-4 bg-slate-50/30">
-                        <h3 class="font-bold text-slate-800">Daftar Kendaraan</h3>
-                        <div class="relative w-full sm:w-auto">
-                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="text" id="search-motor" oninput="ui.renderMotors()" placeholder="Cari plat, pemilik, atau merek..." class="pl-11 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm w-full sm:w-72 font-medium transition-all shadow-sm">
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
-                                <tr><th class="px-6 py-4">Plat</th><th class="px-6 py-4">Merek/Tipe</th><th class="px-6 py-4">Pemilik</th><th class="px-6 py-4 text-center">Status</th><th class="px-6 py-4 text-center">Aksi</th></tr>
-                            </thead>
-                            <tbody id="table-motor-data" class="text-sm font-medium"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="antrian" class="page-section">
-            <h2 class="text-3xl font-black text-slate-800 mb-8">Manajemen Antrian Servis</h2>
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
-                    <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Daftarkan Antrian Baru</h3>
-                    <form onsubmit="app.handleAntrianSubmit(event)">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Motor</label>
-                        <div class="relative mb-6">
-                            <input type="hidden" id="antrian-motor-id" required>
-                            
-                            <input type="text" id="antrian-motor-search" autocomplete="off" 
-                                class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" 
-                                placeholder="Ketik min. 2 huruf Plat atau Pemilik...">
-                            
-                            <div id="antrian-motor-dropdown" class="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 max-h-56 overflow-y-auto hidden">
-                                </div>
-                        </div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Keluhan Pelanggan</label>
-                        <textarea id="antrian-keluhan" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none focus:border-blue-500 h-32" placeholder="Ganti oli, rem blong, dll..."></textarea>
-                        <button type="submit" class="w-full bg-slate-800 text-white font-black py-4 rounded-xl hover:bg-slate-900 shadow-xl transition-all">Masukkan ke Antrian</button>
-                    </form>
-                </div>
-                <div>
-                    <div class="flex flex-wrap justify-between items-end mb-4 gap-4">
-                        <h3 class="font-bold text-slate-500 uppercase text-[10px] tracking-widest italic pb-2">Daftar Aktif (Pilih untuk dikerjakan)</h3>
-                        <div class="relative w-full sm:w-auto">
-                            <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                            <input type="text" id="search-antrian" oninput="ui.renderAntrian()" placeholder="Cari Plat atau Keluhan..." class="pl-10 p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm w-full sm:w-64 font-medium shadow-sm transition-all">
-                        </div>
-                    </div>
-                    <div id="list-antrian-container" class="space-y-4"></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="stok" class="page-section">
-            <h2 class="text-3xl font-black text-slate-800 mb-8">Gudang & Suku Cadang</h2>
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div class="xl:col-span-2 space-y-6">
-                    <div id="gudang-action-form" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap items-end gap-3">
-                        <div class="w-40">
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Kategori Barang</label>
-                            <select id="part-kategori" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-semibold text-sm text-slate-700 cursor-pointer">
-                                <option value="">-- Pilih Kategori Detail --</option>
-                                <optgroup label="Core & Performa">
-                                    <option value="Sistem Mesin Utama">Sistem Mesin Utama</option>
-                                    <option value="Sistem Transmisi CVT">Sistem Transmisi CVT (Matic)</option>
-                                    <option value="Sistem Transmisi Manual">Sistem Transmisi Manual/Kopling</option>
-                                    <option value="Sistem Bahan Bakar & Udara">Sistem Bahan Bakar & Udara</option>
-                                    <option value="Sistem Pendingin Mesin">Sistem Pendingin Mesin</option>
-                                    <option value="Sistem Pembuangan">Sistem Pembuangan (Knalpot)</option>
-                                </optgroup>
-                                <optgroup label="Maintenance & Cairan">
-                                    <option value="Sistem Pelumas & Perawatan">Sistem Pelumas & Cairan Perawatan</option>
-                                </optgroup>
-                                <optgroup label="Kelistrikan & Kontrol">
-                                    <option value="Sistem Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
-                                    <option value="Sistem Pencahayaan & Indikator">Pencahayaan & Indikator</option>
-                                    <option value="Sistem Kemudi & Kontrol">Sistem Kemudi & Kontrol (Kabel/Gas)</option>
-                                </optgroup>
-                                <optgroup label="Kaki-Kaki & Pengereman">
-                                    <option value="Sistem Pengereman">Sistem Pengereman</option>
-                                    <option value="Sistem Suspensi">Sistem Suspensi (Shockbreaker)</option>
-                                    <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
-                                </optgroup>
-                                <optgroup label="Eksterior & Variasi">
-                                    <option value="Bodi, Rangka & Eksterior">Bodi, Rangka & Eksterior</option>
-                                    <option value="Aksesoris & Variasi">Aksesoris, Modifikasi & Variasi</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <input type="hidden" id="part-id-edit">
-                        <div class="w-32">
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Kode Suku Cadang</label>
-                            <input type="text" id="part-kode" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold uppercase text-sm" placeholder="Otomatis">
-                        </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Nama / Item Barang</label>
-                            <input type="text" id="part-nama" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-semibold text-sm" placeholder="Contoh: Oli Mesin">
-                        </div>
-                        <div class="w-20">
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Stok</label>
-                            <input type="number" id="part-stok" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-center font-bold outline-none focus:border-blue-500 text-sm" placeholder="0">
-                        </div>
-                        <div class="w-32">
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Harga (Rp)</label>
-                            <input type="number" id="part-harga" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-blue-600 font-bold outline-none focus:border-blue-500 text-sm" placeholder="0">
-                        </div>
-                        <div class="flex gap-2 mb-[1px]">
-                            <button type="button" id="btn-save-part" onclick="app.handlePartSubmit()" class="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-black hover:bg-blue-700 shadow-lg transition-all text-sm">Tambah</button>
-                            <button type="button" id="btn-cancel-part" onclick="ui.resetPartForm()" class="bg-slate-100 text-slate-500 px-4 py-3.5 rounded-xl font-black hover:bg-slate-200 transition-all hidden"><i class="fa-solid fa-times"></i></button>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-fit">
-                        <div class="p-6 border-b border-slate-50 flex flex-wrap justify-between items-center gap-4 bg-slate-50/30">
-                            <h3 class="font-bold text-slate-800">Daftar Inventaris</h3>
-                            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                                <select id="filter-kategori-stok" onchange="ui.renderStok()" class="p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm font-medium shadow-sm cursor-pointer">
-                                    <option value="">Semua Kategori</option>
-                                    <option value="Sistem Mesin Utama">Sistem Mesin Utama</option>
-                                    <option value="Sistem Transmisi CVT (Matic)">Sistem Transmisi CVT (Matic)</option>
-                                    <option value="Sistem Transmisi Manual/Kopling">Sistem Transmisi Manual/Kopling</option>
-                                    <option value="Sistem Bahan Bakar & Udara">Sistem Bahan Bakar & Udara</option>
-                                    <option value="Sistem Pendingin Mesin">Sistem Pendingin Mesin</option>
-                                    <option value="Sistem Pembuangan (Knalpot)">Sistem Pembuangan (Knalpot)</option>
-                                    <option value="Sistem Pelumas & Cairan Perawatan">Sistem Pelumas & Cairan Perawatan</option>
-                                    <option value="Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
-                                    <option value="Pencahayaan & Indikator">Pencahayaan & Indikator</option>
-                                    <option value="Sistem Kemudi & Kontrol (Kabel/Gas)">Sistem Kemudi & Kontrol (Kabel/Gas)</option>
-                                    <option value="Sistem Pengereman">Sistem Pengereman</option>
-                                    <option value="Sistem Suspensi (Shockbreaker)">Sistem Suspensi (Shockbreaker)</option>
-                                    <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
-                                    <option value="Bodi, Rangka & Eksterior">Bodi, Rangka & Eksterior</option>
-                                    <option value="Aksesoris, Modifikasi & Variasi">Aksesoris, Modifikasi & Variasi</option>
-                                </select>
-                                <div class="relative w-full sm:w-auto">
-                                    <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                                    <input type="text" id="search-stok" oninput="ui.renderStok()" placeholder="Cari kode atau nama..." class="pl-11 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 text-sm w-full sm:w-64 font-medium transition-all shadow-sm">
-                                </div>
-                            </div>
+                
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-4 md:p-6 border-b border-slate-50 flex justify-between items-center bg-blue-50/30">
+                            <h3 class="font-bold text-slate-800 tracking-tight flex items-center gap-2 text-sm md:text-base">
+                                <i class="fa-solid fa-tools text-blue-500"></i> Riwayat Servis Motor
+                            </h3>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left">
-                                <thead class="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
-                                    <tr><th class="px-6 py-4">Item Sparepart</th><th class="px-6 py-4 text-center">Stok Fisik</th><th class="px-6 py-4 text-right">Harga Satuan</th><th class="px-6 py-4 text-center">Aksi</th></tr>
+                            <table class="w-full text-left min-w-[500px]">
+                                <thead class="bg-slate-50 text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-widest border-b">
+                                    <tr>
+                                        <th class="px-4 py-3 md:px-6 md:py-4">Waktu</th>
+                                        <th class="px-4 py-3 md:px-6 md:py-4">Plat</th>
+                                        <th class="px-4 py-3 md:px-6 md:py-4 text-center">Pemilik</th> 
+                                        <th class="px-4 py-3 md:px-6 md:py-4 text-center">Biaya</th>
+                                        <th class="px-4 py-3 md:px-6 md:py-4 text-center">Aksi</th>
+                                    </tr>
                                 </thead>
-                                <tbody id="table-stok-data" class="text-sm font-medium"></tbody>
+                                <tbody id="table-recent-servis" class="text-xs md:text-sm font-medium"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-4 md:p-6 border-b border-slate-50 flex justify-between items-center bg-green-50/30">
+                            <h3 class="font-bold text-slate-800 tracking-tight flex items-center gap-2 text-sm md:text-base">
+                                <i class="fa-solid fa-cart-shopping text-green-500"></i> Riwayat Pembelian Langsung
+                            </h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[450px]">
+                                <thead class="bg-slate-50 text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-widest border-b">
+                                    <tr><th class="px-4 py-3 md:px-6 md:py-4">Waktu</th><th class="px-4 py-3 md:px-6 md:py-4">Keterangan</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Total</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Aksi</th></tr>
+                                </thead>
+                                <tbody id="table-direct-purchase" class="text-xs md:text-sm font-medium"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-                <div class="bg-slate-900 rounded-3xl p-8 text-white h-fit shadow-2xl relative overflow-hidden max-h-[600px] overflow-y-auto">
-                    <div class="absolute -right-5 -top-5 opacity-10 text-9xl rotate-12"><i class="fa-solid fa-boxes-stacked"></i></div>
-                    <h3 class="font-bold text-blue-400 mb-6 border-b border-slate-700/50 pb-5 flex items-center gap-2 relative z-10">
-                        <i class="fa-solid fa-history"></i> Log Keluar Masuk Barang
-                    </h3>
-                    <div id="stack-lifo-container" class="space-y-6 relative z-10 min-h-[150px]"></div>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <section id="kasir" class="page-section">
-            <h2 class="text-3xl font-black text-slate-800 mb-8">Penyelesaian Servis & Kasir</h2>
-            <form onsubmit="app.handleTransaksiSubmit(event)">
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                    <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
-                        <div class="flex items-center justify-between border-b pb-4 mb-6">
-                            <h3 class="font-bold text-slate-800 flex items-center gap-3 text-sm uppercase tracking-widest">
-                                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px]">1</span> Detail Servis
-                            </h3>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" id="kasir-parts-only" class="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500" onchange="app.toggleKasirMode()">
-                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Beli Suku Cadang SAJA</span>
-                            </label>
+            <section id="motor" class="page-section">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-6 md:mb-8">Data Master Motor</h2>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
+                        <h3 class="font-bold text-slate-800 mb-4 md:mb-6 flex items-center gap-2" id="motor-form-title"><i class="fa-solid fa-plus-circle text-blue-500"></i> Tambah Motor Baru</h3>
+                        <form id="form-motor" onsubmit="app.handleMotorSubmit(event)">
+                            <input type="hidden" id="motor-id-edit">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Plat Nomor</label>
+                                    <input type="text" id="motor-plat" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 uppercase font-bold text-slate-700 text-sm md:text-base" placeholder="DD 2510 NX">
+                                </div>
+                                <div class="grid grid-cols-2 gap-3 md:gap-4">
+                                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Merek</label><input type="text" id="motor-merk" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm md:text-base" placeholder="Honda"></div>
+                                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Tipe</label><input type="text" id="motor-tipe" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm md:text-base" placeholder="Beat"></div>
+                                </div>
+                                <div class="relative">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Nama Pemilik</label>
+                                    <input type="text" id="motor-pemilik" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm md:text-base" placeholder="Hanya huruf alfabet">
+                                    <p id="err-nama" class="text-[10px] text-red-500 mt-1 font-bold hidden">Nama tidak boleh mengandung angka!</p>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Tahun</label>
+                                    <input type="number" id="motor-tahun" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm md:text-base" placeholder="2024">
+                                </div>
+                                <div class="flex flex-col gap-2 md:gap-3 pt-4">
+                                    <button type="submit" id="btn-save-motor" class="w-full bg-blue-600 text-white font-black py-3 md:py-4 rounded-xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-sm md:text-base">Simpan Data</button>
+                                    <button type="button" id="btn-cancel-motor" onclick="ui.resetMotorForm()" class="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl hover:bg-slate-200 hidden text-sm md:text-base">Batal Edit</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="xl:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-fit">
+                        <div class="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/30">
+                            <h3 class="font-bold text-slate-800">Daftar Kendaraan</h3>
+                            <div class="relative w-full sm:w-auto">
+                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="search-motor" oninput="ui.renderMotors()" placeholder="Cari plat, pemilik, atau merek..." class="pl-11 p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 text-xs md:text-sm w-full sm:w-72 font-medium transition-all shadow-sm">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[500px]">
+                                <thead class="bg-slate-50 text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
+                                    <tr><th class="px-4 py-3 md:px-6 md:py-4">Plat</th><th class="px-4 py-3 md:px-6 md:py-4">Merek/Tipe</th><th class="px-4 py-3 md:px-6 md:py-4">Pemilik</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Status</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Aksi</th></tr>
+                                </thead>
+                                <tbody id="table-motor-data" class="text-xs md:text-sm font-medium"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="antrian" class="page-section">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-6 md:mb-8">Manajemen Antrian Servis</h2>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                    <div class="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
+                        <h3 class="font-bold text-slate-800 mb-4 md:mb-6 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Daftarkan Antrian Baru</h3>
+                        <form onsubmit="app.handleAntrianSubmit(event)">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Pilih Motor</label>
+                            <div class="relative mb-4 md:mb-6">
+                                <input type="hidden" id="antrian-motor-id" required>
+                                
+                                <input type="text" id="antrian-motor-search" autocomplete="off" 
+                                    class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold text-sm md:text-base" 
+                                    placeholder="Ketik min. 2 huruf Plat...">
+                                
+                                <div id="antrian-motor-dropdown" class="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-2xl mt-2 max-h-56 overflow-y-auto hidden">
+                                    </div>
+                            </div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Keluhan Pelanggan</label>
+                            <textarea id="antrian-keluhan" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 md:mb-6 outline-none focus:border-blue-500 h-24 md:h-32 text-sm md:text-base" placeholder="Ganti oli, rem blong, dll..."></textarea>
+                            <button type="submit" class="w-full bg-slate-800 text-white font-black py-3 md:py-4 rounded-xl hover:bg-slate-900 shadow-xl transition-all text-sm md:text-base">Masukkan ke Antrian</button>
+                        </form>
+                    </div>
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-3 md:gap-4">
+                            <h3 class="font-bold text-slate-500 uppercase text-[9px] md:text-[10px] tracking-widest italic pb-1 md:pb-2">Daftar Aktif (Pilih untuk dikerjakan)</h3>
+                            <div class="relative w-full sm:w-auto">
+                                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs md:text-sm"></i>
+                                <input type="text" id="search-antrian" oninput="ui.renderAntrian()" placeholder="Cari Plat atau Keluhan..." class="pl-9 p-2 md:p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 text-xs md:text-sm w-full sm:w-64 font-medium shadow-sm transition-all">
+                            </div>
+                        </div>
+                        <div id="list-antrian-container" class="space-y-3 md:space-y-4"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stok" class="page-section">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-6 md:mb-8">Gudang & Suku Cadang</h2>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
+                    <div class="xl:col-span-2 space-y-4 md:space-y-6">
+                        <div id="gudang-action-form" class="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:flex-wrap items-start md:items-end gap-3">
+                            <div class="w-full md:w-40">
+                                <label class="text-[10px] font-bold text-slate-400 block mb-1">Kategori Barang</label>
+                                <select id="part-kategori" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-semibold text-xs md:text-sm text-slate-700 cursor-pointer">
+                                    <option value="">-- Kategori --</option>
+                                    <optgroup label="Core & Performa">
+                                        <option value="Sistem Mesin Utama">Sistem Mesin</option>
+                                        <option value="Sistem Transmisi CVT">CVT (Matic)</option>
+                                        <option value="Sistem Transmisi Manual">Manual/Kopling</option>
+                                        <option value="Sistem Bahan Bakar & Udara">Bahan Bakar & Udara</option>
+                                        <option value="Sistem Pendingin Mesin">Pendingin Mesin</option>
+                                        <option value="Sistem Pembuangan">Pembuangan (Knalpot)</option>
+                                    </optgroup>
+                                    <optgroup label="Maintenance & Cairan">
+                                        <option value="Sistem Pelumas & Perawatan">Pelumas & Perawatan</option>
+                                    </optgroup>
+                                    <optgroup label="Kelistrikan & Kontrol">
+                                        <option value="Sistem Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
+                                        <option value="Sistem Pencahayaan & Indikator">Pencahayaan & Indikator</option>
+                                        <option value="Sistem Kemudi & Kontrol">Kemudi & Kontrol</option>
+                                    </optgroup>
+                                    <optgroup label="Kaki-Kaki & Pengereman">
+                                        <option value="Sistem Pengereman">Pengereman</option>
+                                        <option value="Sistem Suspensi">Suspensi (Shock)</option>
+                                        <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
+                                    </optgroup>
+                                    <optgroup label="Eksterior & Variasi">
+                                        <option value="Bodi, Rangka & Eksterior">Bodi & Eksterior</option>
+                                        <option value="Aksesoris & Variasi">Variasi</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <input type="hidden" id="part-id-edit">
+                            <div class="w-full md:w-32">
+                                <label class="text-[10px] font-bold text-slate-400 block mb-1">Kode Suku Cadang</label>
+                                <input type="text" id="part-kode" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-bold uppercase text-xs md:text-sm" placeholder="Otomatis">
+                            </div>
+                            <div class="w-full md:flex-1 md:min-w-[150px]">
+                                <label class="text-[10px] font-bold text-slate-400 block mb-1">Nama / Item Barang</label>
+                                <input type="text" id="part-nama" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-semibold text-xs md:text-sm" placeholder="Contoh: Oli Mesin">
+                            </div>
+                            <div class="flex gap-3 w-full md:w-auto">
+                                <div class="flex-1 md:w-20">
+                                    <label class="text-[10px] font-bold text-slate-400 block mb-1">Stok</label>
+                                    <input type="number" id="part-stok" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-center font-bold outline-none focus:border-blue-500 text-xs md:text-sm" placeholder="0">
+                                </div>
+                                <div class="flex-1 md:w-32">
+                                    <label class="text-[10px] font-bold text-slate-400 block mb-1">Harga (Rp)</label>
+                                    <input type="number" id="part-harga" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-blue-600 font-bold outline-none focus:border-blue-500 text-xs md:text-sm" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="flex gap-2 w-full md:w-auto mt-2 md:mt-0 md:mb-[1px]">
+                                <button type="button" id="btn-save-part" onclick="app.handlePartSubmit()" class="flex-1 md:flex-none bg-blue-600 text-white px-6 py-3 rounded-xl font-black hover:bg-blue-700 shadow-lg transition-all text-xs md:text-sm">Tambah</button>
+                                <button type="button" id="btn-cancel-part" onclick="ui.resetPartForm()" class="bg-slate-100 text-slate-500 px-4 py-3 rounded-xl font-black hover:bg-slate-200 transition-all hidden"><i class="fa-solid fa-times"></i></button>
+                            </div>
                         </div>
                         
-                        <div class="space-y-4">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Pilih Motor (Status PROSES)</label>
-                                <select id="kasir-motor-id" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:border-blue-500 font-bold text-blue-600"></select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Hasil Pengerjaan</label>
-                                <textarea id="kasir-deskripsi" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none h-24" placeholder="Detail hasil servis..."></textarea>
-                            </div>
-                            <div class="grid grid-cols-2 gap-5">
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Tanggal & Jam</label>
-                                    <input type="datetime-local" id="kasir-tanggal" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none font-medium">
+                        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col h-fit">
+                            <div class="p-4 md:p-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4 bg-slate-50/30">
+                                <h3 class="font-bold text-slate-800">Daftar Inventaris</h3>
+                                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3 w-full sm:w-auto">
+                                    <select id="filter-kategori-stok" onchange="ui.renderStok()" class="p-2 md:p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 text-xs md:text-sm font-medium shadow-sm cursor-pointer">
+                                        <option value="">Semua Kategori</option>
+                                        <option value="Sistem Mesin Utama">Sistem Mesin</option>
+                                        <option value="Sistem Transmisi CVT">CVT (Matic)</option>
+                                        <option value="Sistem Transmisi Manual">Manual/Kopling</option>
+                                        <option value="Sistem Bahan Bakar & Udara">Bahan Bakar & Udara</option>
+                                        <option value="Sistem Pendingin Mesin">Pendingin Mesin</option>
+                                        <option value="Sistem Pembuangan">Pembuangan (Knalpot)</option>
+                                        <option value="Sistem Pelumas & Perawatan">Pelumas & Perawatan</option>
+                                        <option value="Sistem Kelistrikan & Pengapian">Kelistrikan & Pengapian</option>
+                                        <option value="Sistem Pencahayaan & Indikator">Pencahayaan & Indikator</option>
+                                        <option value="Sistem Kemudi & Kontrol">Kemudi & Kontrol</option>
+                                        <option value="Sistem Pengereman">Pengereman</option>
+                                        <option value="Sistem Suspensi">Suspensi (Shock)</option>
+                                        <option value="Roda, Ban & Velg">Roda, Ban & Velg</option>
+                                        <option value="Bodi, Rangka & Eksterior">Bodi & Eksterior</option>
+                                        <option value="Aksesoris & Variasi">Variasi</option>
+                                    </select>
+                                    <div class="relative w-full sm:w-auto">
+                                        <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                        <input type="text" id="search-stok" oninput="ui.renderStok()" placeholder="Cari kode atau nama..." class="pl-10 md:pl-11 p-2 md:p-3 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 text-xs md:text-sm w-full sm:w-64 font-medium transition-all shadow-sm">
+                                    </div>
                                 </div>
-                                <div><label class="text-[10px] font-bold text-slate-400 uppercase">Biaya Jasa (Rp)</label><input type="number" id="kasir-jasa" value="0" required class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-black text-blue-600 text-lg outline-none"></div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left min-w-[500px]">
+                                    <thead class="bg-slate-50/50 text-slate-400 text-[9px] md:text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
+                                        <tr><th class="px-4 py-3 md:px-6 md:py-4">Item Sparepart</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Stok Fisik</th><th class="px-4 py-3 md:px-6 md:py-4 text-right">Harga Satuan</th><th class="px-4 py-3 md:px-6 md:py-4 text-center">Aksi</th></tr>
+                                    </thead>
+                                    <tbody id="table-stok-data" class="text-xs md:text-sm font-medium"></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-8">
-                        <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full min-h-[450px]">
-                            <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-3 border-b pb-4 text-sm uppercase tracking-widest">
-                                <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px]">2</span> Keranjang Belanja
-                            </h3>
-                            <div class="flex gap-3 mb-6">
-                                <select id="kasir-pilih-part" class="flex-1 p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none"></select>
-                                <input type="number" id="kasir-qty" value="1" min="1" class="w-20 p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-center outline-none">
-                                <button type="button" onclick="app.tambahKeKeranjang()" class="bg-slate-800 text-white px-6 rounded-xl font-bold hover:bg-slate-900 active:scale-95 transition-all">Add</button>
-                            </div>
-                            <div id="cart-container" class="flex-1 space-y-2 mb-6 min-h-[150px] overflow-y-auto bg-slate-50/50 p-3 rounded-2xl border-dashed border-2 border-slate-200">
-                                <p class="text-center text-slate-400 py-10 italic text-sm font-medium">Belum ada item ditambahkan.</p>
-                            </div>
-                            <div class="pt-6 border-t border-slate-100 flex justify-between items-end">
-                                <div>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-widest">Total Bayar</p>
-                                    <h4 class="text-4xl font-black text-slate-900" id="kasir-total-display">Rp 0</h4>
-                                </div>
-                                <button type="submit" class="bg-green-600 text-white px-10 py-5 rounded-2xl font-black text-lg hover:bg-green-700 shadow-xl shadow-green-200 transition-all active:scale-95">SELESAI & CETAK</button>
-                            </div>
-                        </div>
+                    <div class="bg-slate-900 rounded-3xl p-6 md:p-8 text-white h-fit shadow-2xl relative overflow-hidden max-h-[400px] md:max-h-[600px] overflow-y-auto">
+                        <div class="absolute -right-5 -top-5 opacity-10 text-7xl md:text-9xl rotate-12"><i class="fa-solid fa-boxes-stacked"></i></div>
+                        <h3 class="font-bold text-blue-400 mb-4 md:mb-6 border-b border-slate-700/50 pb-4 md:pb-5 flex items-center gap-2 relative z-10 text-sm md:text-base">
+                            <i class="fa-solid fa-history"></i> Log Keluar Masuk Barang
+                        </h3>
+                        <div id="stack-lifo-container" class="space-y-4 md:space-y-6 relative z-10 min-h-[150px]"></div>
                     </div>
                 </div>
-            </form>
-        </section>
-    </main>
+            </section>
 
-    <div id="modal-stok" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center transition-opacity">
-        <div class="bg-white p-8 rounded-3xl w-[350px] shadow-2xl border border-slate-100">
-            <h3 class="font-black text-xl mb-1 text-slate-800">Restok Gudang</h3>
-            <p id="restok-label" class="text-xs text-slate-500 mb-6 font-bold uppercase"></p>
+            <section id="kasir" class="page-section">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-800 mb-6 md:mb-8">Penyelesaian Servis & Kasir</h2>
+                <form onsubmit="app.handleTransaksiSubmit(event)">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10">
+                        <div class="bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm h-fit">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-4 mb-4 md:mb-6 gap-3">
+                                <h3 class="font-bold text-slate-800 flex items-center gap-3 text-xs md:text-sm uppercase tracking-widest">
+                                    <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px]">1</span> Detail Servis
+                                </h3>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="kasir-parts-only" class="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500" onchange="app.toggleKasirMode()">
+                                    <span class="text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-tighter">Beli Suku Cadang SAJA</span>
+                                </label>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Pilih Motor (Status PROSES)</label>
+                                    <select id="kasir-motor-id" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none focus:border-blue-500 font-bold text-blue-600 text-sm md:text-base"></select>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase">Hasil Pengerjaan</label>
+                                    <textarea id="kasir-deskripsi" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none h-20 md:h-24 text-sm md:text-base" placeholder="Detail hasil servis..."></textarea>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
+                                    <div>
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase">Tanggal & Jam</label>
+                                        <input type="datetime-local" id="kasir-tanggal" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 outline-none font-medium text-sm md:text-base">
+                                    </div>
+                                    <div><label class="text-[10px] font-bold text-slate-400 uppercase">Biaya Jasa (Rp)</label><input type="number" id="kasir-jasa" value="0" required class="w-full p-3 md:p-4 bg-slate-50 border border-slate-200 rounded-xl mt-1 font-black text-blue-600 text-base md:text-lg outline-none"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-6 md:gap-8">
+                            <div class="bg-white p-5 md:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full min-h-[400px] md:min-h-[450px]">
+                                <h3 class="font-bold text-slate-800 mb-4 md:mb-6 flex items-center gap-3 border-b pb-4 text-xs md:text-sm uppercase tracking-widest">
+                                    <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px]">2</span> Keranjang Belanja
+                                </h3>
+                                <div class="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4 md:mb-6">
+                                    <select id="kasir-pilih-part" class="w-full sm:flex-1 p-3 md:p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold outline-none"></select>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="kasir-qty" value="1" min="1" class="w-20 p-3 md:p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-center outline-none text-sm">
+                                        <button type="button" onclick="app.tambahKeKeranjang()" class="flex-1 sm:flex-none bg-slate-800 text-white px-6 rounded-xl font-bold hover:bg-slate-900 active:scale-95 transition-all text-sm md:text-base">Add</button>
+                                    </div>
+                                </div>
+                                <div id="cart-container" class="flex-1 space-y-2 mb-4 md:mb-6 min-h-[120px] overflow-y-auto bg-slate-50/50 p-2 md:p-3 rounded-2xl border-dashed border-2 border-slate-200">
+                                    <p class="text-center text-slate-400 py-6 md:py-10 italic text-xs md:text-sm font-medium">Belum ada item ditambahkan.</p>
+                                </div>
+                                <div class="pt-4 md:pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
+                                    <div class="text-center sm:text-left">
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-widest">Total Bayar</p>
+                                        <h4 class="text-3xl md:text-4xl font-black text-slate-900" id="kasir-total-display">Rp 0</h4>
+                                    </div>
+                                    <button type="submit" class="w-full sm:w-auto bg-green-600 text-white px-8 md:px-10 py-4 md:py-5 rounded-2xl font-black text-base md:text-lg hover:bg-green-700 shadow-xl shadow-green-200 transition-all active:scale-95">SELESAI & CETAK</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div> <div id="modal-stok" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center transition-opacity p-4">
+        <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-[350px] shadow-2xl border border-slate-100 text-center">
+            <h3 class="font-black text-lg md:text-xl mb-1 text-slate-800">Restok Gudang</h3>
+            <p id="restok-label" class="text-[10px] md:text-xs text-slate-500 mb-6 font-bold uppercase"></p>
             <input type="hidden" id="restok-id">
-            <input type="number" id="restok-qty" value="1" min="1" class="w-full p-4 border border-slate-200 rounded-xl mb-6 text-center font-black text-3xl bg-slate-50 outline-none text-blue-600 focus:border-blue-500">
-            <div class="flex gap-3">
-                <button onclick="ui.closeStokModal()" class="flex-1 py-3.5 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-all">Batal</button>
-                <button onclick="app.prosesRestok()" class="flex-1 bg-blue-600 text-white font-black py-3.5 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">Push</button>
+            <input type="number" id="restok-qty" value="1" min="1" class="w-full p-3 md:p-4 border border-slate-200 rounded-xl mb-4 md:mb-6 text-center font-black text-2xl md:text-3xl bg-slate-50 outline-none text-blue-600 focus:border-blue-500">
+            <div class="flex gap-2 md:gap-3">
+                <button onclick="ui.closeStokModal()" class="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">Batal</button>
+                <button onclick="app.prosesRestok()" class="flex-1 bg-blue-600 text-white font-black py-3 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all text-sm">Push</button>
             </div>
         </div>
     </div>
 
-    <div id="modal-detail-transaksi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center transition-opacity">
-        <div class="bg-white p-8 rounded-3xl w-[450px] shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-black text-xl text-slate-800">Detail Transaksi</h3>
-                <button onclick="ui.closeDetailTransaksi()" class="text-slate-400 hover:text-red-500 transition-all"><i class="fa-solid fa-times text-xl"></i></button>
+    <div id="modal-detail-transaksi" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center transition-opacity p-4">
+        <div class="bg-white p-6 md:p-8 rounded-3xl w-full max-w-[450px] shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4 md:mb-6">
+                <h3 class="font-black text-lg md:text-xl text-slate-800">Detail Transaksi</h3>
+                <button onclick="ui.closeDetailTransaksi()" class="text-slate-400 hover:text-red-500 transition-all bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-times"></i></button>
             </div>
-            <div id="detail-transaksi-content" class="overflow-y-auto pr-2 space-y-4 text-sm text-slate-600">
+            <div id="detail-transaksi-content" class="overflow-y-auto pr-2 space-y-3 md:space-y-4 text-xs md:text-sm text-slate-600">
                 </div>
-            <div class="mt-6 pt-4 border-t border-slate-100">
-                <button onclick="ui.closeDetailTransaksi()" class="w-full py-3.5 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-all">Tutup Detail</button>
+            <div class="mt-4 md:mt-6 pt-4 border-t border-slate-100">
+                <button onclick="ui.closeDetailTransaksi()" class="w-full py-3 md:py-3.5 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm">Tutup Detail</button>
             </div>
         </div>
     </div>

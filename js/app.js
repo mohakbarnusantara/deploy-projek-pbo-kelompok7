@@ -581,16 +581,42 @@ const app = {
 };
 
 // --- VIEW UI RENDERER ---
-const ui = {
+    const ui = {
+        sidebarOpen: false,
+        
+        toggleSidebar() {
+            this.sidebarOpen = !this.sidebarOpen;
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebar-overlay');
+            
+            if(this.sidebarOpen) {
+                sb.classList.remove('-translate-x-full');
+                ov.classList.remove('hidden');
+                // Sedikit delay agar transisi opasitas terlihat halus
+                setTimeout(() => ov.classList.remove('opacity-0'), 10);
+            } else {
+                sb.classList.add('-translate-x-full');
+                ov.classList.add('opacity-0');
+                setTimeout(() => ov.classList.add('hidden'), 300);
+            }
+    },
+
     nav(id) {
         document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.sidebar-btn').forEach(b => { b.classList.remove('active'); if(b.dataset.id === id) b.classList.add('active'); });
+        
         if(id === 'kasir') {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('kasir-tanggal').value = now.toISOString().slice(0, 16);
         }
+        
+        // Auto tutup sidebar jika di HP (layar < 768px) setelah klik menu
+        if (window.innerWidth < 768 && this.sidebarOpen) {
+            this.toggleSidebar();
+        }
+        
         app.refreshUI();
     },
     applyRolePermissions() {
@@ -617,17 +643,21 @@ const ui = {
         const dH = app.riwayat.filter(r => r.motor.plat === '-');
         const uM = new Set(sH.map(r => r.motor.plat));
 
+        // Update DOM untuk angka di kotak statistik
         document.getElementById('stat-motor').innerText = uM.size;
         document.getElementById('stat-antrian').innerText = app.antrian.filter(a=>a.status === 'ANTRIAN').length;
         document.getElementById('stat-proses').innerText = app.antrian.filter(a=>a.status === 'PROSES').length;
         document.getElementById('stat-selesai').innerText = sH.length;
+        document.getElementById('stat-pembelian').innerText = dH.length; // Hitung total transaksi pembelian langsung
 
+        // Render tabel Riwayat Servis
         const tbS = document.getElementById('table-recent-servis'); tbS.innerHTML = '';
         if(sH.length === 0) tbS.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
         sH.slice(0,10).forEach(r => {
             tbS.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 font-black uppercase text-center">${r.motor.plat}</td><td class="px-6 py-4 font-bold text-slate-500 capitalize text-center">${r.motor.pemilik}</td><td class="px-6 py-4 font-black text-blue-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-green-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
         });
 
+        // Render tabel Riwayat Pembelian Langsung
         const tbD = document.getElementById('table-direct-purchase'); tbD.innerHTML = '';
         if(dH.length === 0) tbD.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
         dH.slice(0,10).forEach(r => {
