@@ -1,6 +1,7 @@
 /**
  * =========================================
  * MOTOCARE PRO - FULL CLOUD SYSTEM INTEGRATED
+ * (Event-Driven & Smart Refresh Edition)
  * =========================================
  */
 
@@ -73,7 +74,6 @@ class TransaksiServis extends EntitasBase {
     }
     getInfo() { return `Transaksi #${this.id} - Total: ${app.formatRp.format(this.hitungTotal())}`; }
     get formatWaktu() {
-        // FIX: Mencegah error 'Invalid Date'
         const rawDate = this.tglRaw ? new Date(this.tglRaw) : new Date();
         const d = rawDate.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
         const t = rawDate.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
@@ -88,11 +88,34 @@ const app = {
     formatRp: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }),
 
     async init() {
+        // EVENT-DRIVEN 1: Cek status login permanen di Local Storage
+        const savedUser = localStorage.getItem('currentUserRole');
+        if (savedUser) {
+            this.isLogin = true;
+            this.currentUserRole = savedUser;
+            const overlay = document.getElementById('login-overlay');
+            if(overlay) overlay.style.display = 'none';
+            ui.applyRolePermissions();
+            
+            // Arahkan sesuai peran
+            if(savedUser === 'gudang') ui.nav('stok', false);
+            else ui.nav('dashboard', false);
+        }
+
         await this.load(); 
         this.startClock();
         ui.renderAll();
         this.setupAutocomplete();
 
+        // EVENT-DRIVEN 2: Smart Refresh saat Tab Browser kembali difokuskan
+        // Jika kasir kembali ke tab aplikasi setelah membuka aplikasi lain, data otomatis ditarik
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && this.isLogin) {
+                this.load();
+            }
+        });
+
+        // Validasi form (Sama seperti sebelumnya)
         const namaInput = document.getElementById('motor-pemilik');
         const platInput = document.getElementById('motor-plat');
         const jasaInput = document.getElementById('kasir-jasa');
@@ -201,16 +224,22 @@ const app = {
 
         errorMsg.classList.add('hidden');
         this.isLogin = true;
+        
+        // Simpan sesi login ke browser
+        localStorage.setItem('currentUserRole', this.currentUserRole);
+
         document.getElementById('login-overlay').style.opacity = '0';
         setTimeout(() => { document.getElementById('login-overlay').style.display = 'none'; }, 500);
         
         ui.applyRolePermissions();
         if(this.currentUserRole === 'gudang') ui.nav('stok');
         else ui.nav('dashboard');
-        this.refreshUI();
     },
 
     logout() { 
+        // Hapus sesi login dari browser
+        localStorage.clear();
+
         this.isLogin = false;
         this.currentUserRole = null;
         const loginOverlay = document.getElementById('login-overlay');
@@ -220,19 +249,19 @@ const app = {
         document.getElementById('log-pass').value = '';
         this.cart = [];
         ui.renderCart();
-        ui.nav('dashboard');
+        ui.nav('dashboard', false);
     },
 
     async load() {
+        if (!this.isLogin) return; // Jangan fetch data jika belum login
         try {
-            // FIX: Menggunakan fungsi wrapper khusus agar jika satu tabel gagal diload, aplikasi tidak Blank Screen
             const safeFetch = async (url) => {
                 try {
                     const res = await fetch(url);
                     if (!res.ok) throw new Error('Network error');
                     return await res.json();
                 } catch (err) {
-                    console.warn(`Gagal mengambil data dari ${url}. Menggunakan array kosong.`, err);
+                    console.warn(`Gagal mengambil data dari ${url}.`, err);
                     return [];
                 }
             };
@@ -250,7 +279,6 @@ const app = {
             this.antrian = (qRes || []).map(q => {
                 const a = new AntrianItem(q.vehicle_id, q.keluhan, q.nomor_urut);
                 a.id = q.id; a.status = q.status;
-                // Pastikan waktu fallback jika DB kosong
                 const rawWaktu = q.waktu_dibuat ? new Date(q.waktu_dibuat) : new Date();
                 a.waktu = rawWaktu.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
                 a.tanggal = rawWaktu.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
@@ -270,7 +298,6 @@ const app = {
                 const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
                 const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
                 const c = partsList.map(cp => new ItemKeranjang(cp.id, cp.nama, cp.qty, cp.harga));
-                // FIX: Fallback waktu jika nama kolom di DB Anda bukan waktu_transaksi (misal created_at)
                 const waktu = t.waktu_transaksi || t.created_at || new Date().toISOString();
                 const trx = new TransaksiServis(m, waktu, t.deskripsi, t.biaya_jasa, c, t.id);
                 trx.hitungTotal = () => t.total_biaya; 
@@ -383,7 +410,7 @@ const app = {
             const item = this.antrian.find(a => a.id == antrianId);
             if (item) {
                 document.getElementById('kasir-motor-id').value = item.motorId;
-                document.getElementById('kasir-deskripsi').value = item.keluhan;
+                this.handleKasirMotorChange(); // Trigger agar deskripsi terisi
             }
         } catch (error) { console.error(error); }
     },
@@ -434,7 +461,7 @@ const app = {
             alert("Suku cadang berhasil disimpan!");
         } catch (error) { 
             console.error(error); 
-            alert("Gagal menghubungi server. Pastikan Anda sudah menambahkan kolom kategori_barang di tabel Parts Database.");
+            alert("Gagal menghubungi server. Pastikan tabel terkonfigurasi dengan benar.");
         } finally {
             btn.innerText = prevText;
             btn.disabled = false;
@@ -513,23 +540,19 @@ const app = {
         ui.renderCart();
     },
 
+    // EVENT-DRIVEN 3: Mengambil otomatis keluhan dari antrian
     handleKasirMotorChange() {
         const motorId = document.getElementById('kasir-motor-id').value;
         const deskripsiEl = document.getElementById('kasir-deskripsi');
 
-        // Jika opsi di-reset/kosong
         if (!motorId) {
             deskripsiEl.value = '';
             return;
         }
 
-        // Cari data motor di antrian yang statusnya sedang 'PROSES'
         const qItem = this.antrian.find(a => a.motorId == motorId && a.status === 'PROSES');
-        
         if (qItem) {
-            // Mengisi otomatis textarea dengan keluhan awal dan memberi ruang untuk menambahkan teks
             deskripsiEl.value = `Keluhan awal: ${qItem.keluhan}\nPenanganan: `;
-            // Opsional: Otomatis fokus ke text area setelah memilih motor
             deskripsiEl.focus();
         } else {
             deskripsiEl.value = '';
@@ -623,30 +646,35 @@ const app = {
 };
 
 // --- VIEW UI RENDERER ---
-    const ui = {
-        sidebarOpen: false,
+const ui = {
+    sidebarOpen: false,
+    
+    toggleSidebar() {
+        this.sidebarOpen = !this.sidebarOpen;
+        const sb = document.getElementById('sidebar');
+        const ov = document.getElementById('sidebar-overlay');
         
-        toggleSidebar() {
-            this.sidebarOpen = !this.sidebarOpen;
-            const sb = document.getElementById('sidebar');
-            const ov = document.getElementById('sidebar-overlay');
-            
-            if(this.sidebarOpen) {
-                sb.classList.remove('-translate-x-full');
-                ov.classList.remove('hidden');
-                setTimeout(() => ov.classList.remove('opacity-0'), 10);
-            } else {
-                sb.classList.add('-translate-x-full');
-                ov.classList.add('opacity-0');
-                setTimeout(() => ov.classList.add('hidden'), 300);
-            }
+        if(this.sidebarOpen) {
+            sb.classList.remove('-translate-x-full');
+            ov.classList.remove('hidden');
+            setTimeout(() => ov.classList.remove('opacity-0'), 10);
+        } else {
+            sb.classList.add('-translate-x-full');
+            ov.classList.add('opacity-0');
+            setTimeout(() => ov.classList.add('hidden'), 300);
+        }
     },
 
-    nav(id) {
+    async nav(id, fetchSinyal = true) {
         document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         document.querySelectorAll('.sidebar-btn').forEach(b => { b.classList.remove('active'); if(b.dataset.id === id) b.classList.add('active'); });
         
+        // EVENT-DRIVEN 4: Tarik data terbaru ke database setiap kali pindah menu navigasi
+        if (app.isLogin && fetchSinyal) {
+            await app.load();
+        }
+
         if(id === 'kasir') {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -659,6 +687,7 @@ const app = {
         
         app.refreshUI();
     },
+
     applyRolePermissions() {
         const role = app.currentUserRole;
         const nDash = document.getElementById('btn-nav-dashboard'), nMot = document.getElementById('btn-nav-motor'), nAnt = document.getElementById('btn-nav-antrian'), nStok = document.getElementById('btn-nav-stok'), nKas = document.getElementById('btn-nav-kasir');
@@ -676,6 +705,7 @@ const app = {
         }
         document.getElementById('sidebar-role-label').innerText = `Akses: ${role.toUpperCase()}`;
     },
+
     renderAll() { this.renderDash(); this.renderMotors(); this.renderAntrian(); this.renderStok(); this.renderSelects(); this.renderCart(); },
     
     renderDash() {
@@ -869,7 +899,7 @@ const app = {
         const isP = tr.motor.plat === '-';
         tr.parts.forEach(p => it += `<tr style="border-bottom:1px dashed #ccc;"><td style="padding:6px 0;">${p.nama} <br><small>x${p.qty}</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td></tr>`);
         let hH = isP ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
-        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;\">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
+        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
         a.classList.remove('hidden'); setTimeout(() => { window.print(); a.innerHTML = ''; a.classList.add('hidden'); }, 500);
     }
 };
