@@ -733,8 +733,9 @@ const app = {
         const totalSemua = jsa + totalParts;
 
         if(!isP && !mId) return alert("Pilih motor yang sedang diproses!");
-        if(this.cart.length === 0 && jsa === 0) return alert("Keranjang belanja kosong!");
 
+        if(isP && this.cart.length === 0) return alert("Keranjang belanja kosong! Silakan tambah suku cadang.");
+    
         let platKendaraan = '-', namaPemilik = 'Pelanggan Umum', antrianIdTarget = null, trxMotorInfo;
 
         if (!isP) {
