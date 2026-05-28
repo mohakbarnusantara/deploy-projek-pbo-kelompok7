@@ -73,9 +73,10 @@ class TransaksiServis extends EntitasBase {
     }
     getInfo() { return `Transaksi #${this.id} - Total: ${app.formatRp.format(this.hitungTotal())}`; }
     get formatWaktu() {
-        const date = new Date(this.tglRaw);
-        const d = date.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
-        const t = date.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+        // FIX: Mencegah error 'Invalid Date'
+        const rawDate = this.tglRaw ? new Date(this.tglRaw) : new Date();
+        const d = rawDate.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
+        const t = rawDate.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
         return `${d} ${t}`;
     }
     hitungTotal() { return this.jasa + this.parts.reduce((sum, p) => sum + p.subtotal, 0); }
@@ -224,12 +225,24 @@ const app = {
 
     async load() {
         try {
+            // FIX: Menggunakan fungsi wrapper khusus agar jika satu tabel gagal diload, aplikasi tidak Blank Screen
+            const safeFetch = async (url) => {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('Network error');
+                    return await res.json();
+                } catch (err) {
+                    console.warn(`Gagal mengambil data dari ${url}. Menggunakan array kosong.`, err);
+                    return [];
+                }
+            };
+
             const [mRes, pRes, qRes, tRes, lRes] = await Promise.all([
-                fetch('/api/getData?table=motors').then(r => r.json()),
-                fetch('/api/getData?table=parts').then(r => r.json()),
-                fetch('/api/getData?table=queues').then(r => r.json()),
-                fetch('/api/getData?table=transactions').then(r => r.json()),
-                fetch('/api/getData?table=logs').then(r => r.json())
+                safeFetch('/api/getData?table=motors'),
+                safeFetch('/api/getData?table=parts'),
+                safeFetch('/api/getData?table=queues'),
+                safeFetch('/api/getData?table=transactions'),
+                safeFetch('/api/getData?table=logs')
             ]);
 
             this.motors = (mRes || []).map(x => new Motor(x.plat_nomor, x.merk, x.model, x.pemilik, x.tahun || 2026, x.id));
@@ -237,8 +250,10 @@ const app = {
             this.antrian = (qRes || []).map(q => {
                 const a = new AntrianItem(q.vehicle_id, q.keluhan, q.nomor_urut);
                 a.id = q.id; a.status = q.status;
-                a.waktu = new Date(q.waktu_dibuat).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-                a.tanggal = new Date(q.waktu_dibuat).toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
+                // Pastikan waktu fallback jika DB kosong
+                const rawWaktu = q.waktu_dibuat ? new Date(q.waktu_dibuat) : new Date();
+                a.waktu = rawWaktu.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+                a.tanggal = rawWaktu.toLocaleDateString('id-ID', {day:'2-digit', month:'short'});
                 return a;
             });
             
@@ -255,7 +270,9 @@ const app = {
                 const m = new Motor(t.plat_kendaraan, '-', '-', t.nama_pelanggan, '-');
                 const partsList = typeof t.parts_detail === 'string' ? JSON.parse(t.parts_detail) : (t.parts_detail || []);
                 const c = partsList.map(cp => new ItemKeranjang(cp.id, cp.nama, cp.qty, cp.harga));
-                const trx = new TransaksiServis(m, t.waktu_transaksi, t.deskripsi, t.biaya_jasa, c, t.id);
+                // FIX: Fallback waktu jika nama kolom di DB Anda bukan waktu_transaksi (misal created_at)
+                const waktu = t.waktu_transaksi || t.created_at || new Date().toISOString();
+                const trx = new TransaksiServis(m, waktu, t.deskripsi, t.biaya_jasa, c, t.id);
                 trx.hitungTotal = () => t.total_biaya; 
                 return trx;
             });
@@ -265,7 +282,9 @@ const app = {
             }));
 
             this.refreshUI();
-        } catch (e) { console.error("Error Loading Data:", e); }
+        } catch (e) { 
+            console.error("Fatal Error Loading Data:", e); 
+        }
     },
 
     async deleteData(table, id) {
@@ -592,7 +611,6 @@ const app = {
             if(this.sidebarOpen) {
                 sb.classList.remove('-translate-x-full');
                 ov.classList.remove('hidden');
-                // Sedikit delay agar transisi opasitas terlihat halus
                 setTimeout(() => ov.classList.remove('opacity-0'), 10);
             } else {
                 sb.classList.add('-translate-x-full');
@@ -612,7 +630,6 @@ const app = {
             document.getElementById('kasir-tanggal').value = now.toISOString().slice(0, 16);
         }
         
-        // Auto tutup sidebar jika di HP (layar < 768px) setelah klik menu
         if (window.innerWidth < 768 && this.sidebarOpen) {
             this.toggleSidebar();
         }
@@ -643,21 +660,18 @@ const app = {
         const dH = app.riwayat.filter(r => r.motor.plat === '-');
         const uM = new Set(sH.map(r => r.motor.plat));
 
-        // Update DOM untuk angka di kotak statistik
         document.getElementById('stat-motor').innerText = uM.size;
         document.getElementById('stat-antrian').innerText = app.antrian.filter(a=>a.status === 'ANTRIAN').length;
         document.getElementById('stat-proses').innerText = app.antrian.filter(a=>a.status === 'PROSES').length;
         document.getElementById('stat-selesai').innerText = sH.length;
-        document.getElementById('stat-pembelian').innerText = dH.length; // Hitung total transaksi pembelian langsung
+        document.getElementById('stat-pembelian').innerText = dH.length;
 
-        // Render tabel Riwayat Servis
         const tbS = document.getElementById('table-recent-servis'); tbS.innerHTML = '';
         if(sH.length === 0) tbS.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
         sH.slice(0,10).forEach(r => {
             tbS.innerHTML += `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 text-[11px]">${r.formatWaktu}</td><td class="px-6 py-4 font-black uppercase text-center">${r.motor.plat}</td><td class="px-6 py-4 font-bold text-slate-500 capitalize text-center">${r.motor.pemilik}</td><td class="px-6 py-4 font-black text-blue-600 text-center">${app.formatRp.format(r.hitungTotal())}</td><td class="px-6 py-4 text-center"><button onclick="ui.showDetailTransaksi('${r.id}')" class="text-slate-400 hover:text-blue-500 mr-3" title="Detail"><i class="fa-solid fa-eye"></i></button><button onclick="app.cetakUlang('${r.id}')" class="text-slate-400 hover:text-green-500" title="Cetak Ulang"><i class="fa-solid fa-print"></i></button></td></tr>`;
         });
 
-        // Render tabel Riwayat Pembelian Langsung
         const tbD = document.getElementById('table-direct-purchase'); tbD.innerHTML = '';
         if(dH.length === 0) tbD.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
         dH.slice(0,10).forEach(r => {
@@ -832,7 +846,7 @@ const app = {
         const isP = tr.motor.plat === '-';
         tr.parts.forEach(p => it += `<tr style="border-bottom:1px dashed #ccc;"><td style="padding:6px 0;">${p.nama} <br><small>x${p.qty}</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td></tr>`);
         let hH = isP ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
-        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
+        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;\">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
         a.classList.remove('hidden'); setTimeout(() => { window.print(); a.innerHTML = ''; a.classList.add('hidden'); }, 500);
     }
 };

@@ -5,17 +5,19 @@ module.exports = async (req, res) => {
   
   try {
     if (action === 'delete') {
-      await db.query(`DELETE FROM ${table} WHERE id = $1`, [data.id]);
+      // Mengubah nama tabel menjadi huruf kecil sesuai standard PostgreSQL Neon
+      const targetTable = table.toLowerCase();
+      await db.query(`DELETE FROM ${targetTable} WHERE id = $1`, [data.id]);
       return res.status(200).json({ message: 'Data berhasil dihapus' });
     } 
     
     else if (action === 'update_queue_status') {
-      await db.query('UPDATE Queues SET status = $1 WHERE id = $2', [data.status, data.id]);
+      await db.query('UPDATE queues SET status = $1 WHERE id = $2', [data.status, data.id]);
       return res.status(200).json({ message: 'Status antrean berhasil diupdate' });
     } 
     
     else if (action === 'update_part_stock') {
-      await db.query('UPDATE Parts SET stok = stok + $1 WHERE id = $2', [data.qty, data.id]);
+      await db.query('UPDATE parts SET stok = stok + $1 WHERE id = $2', [data.qty, data.id]);
       return res.status(200).json({ message: 'Stok berhasil disesuaikan' });
     } 
     
@@ -25,7 +27,7 @@ module.exports = async (req, res) => {
         const platNormalized = data.plat_nomor.replace(/\s+/g, ' ').trim().toUpperCase();
         const namaNormalized = data.pemilik.replace(/\s+/g, ' ').trim().replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 
-        let checkQuery = `SELECT v.plat_nomor, c.nama FROM Vehicles v JOIN Customers c ON v.customer_id = c.id WHERE v.plat_nomor = $1`;
+        let checkQuery = `SELECT v.plat_nomor, c.nama FROM vehicles v JOIN customers c ON v.customer_id = c.id WHERE v.plat_nomor = $1`;
         let checkParams = [platNormalized];
 
         if (data.id) {
@@ -40,18 +42,16 @@ module.exports = async (req, res) => {
         }
 
         if (data.id) {
-          const vRes = await db.query('SELECT customer_id FROM Vehicles WHERE id = $1', [data.id]);
+          const vRes = await db.query('SELECT customer_id FROM vehicles WHERE id = $1', [data.id]);
           if(vRes.rows.length > 0) {
               const cId = vRes.rows[0].customer_id;
-              await db.query('UPDATE Customers SET nama = $1 WHERE id = $2', [namaNormalized, cId]);
-              // FIX: Menambahkan kolom tahun ke operasi UPDATE SQL
-              await db.query('UPDATE Vehicles SET plat_nomor = $1, merk = $2, model = $3, tahun = $4 WHERE id = $5', [platNormalized, data.merk, data.model, data.tahun, data.id]);
+              await db.query('UPDATE customers SET nama = $1 WHERE id = $2', [namaNormalized, cId]);
+              await db.query('UPDATE vehicles SET plat_nomor = $1, merk = $2, model = $3, tahun = $4 WHERE id = $5', [platNormalized, data.merk, data.model, data.tahun, data.id]);
           }
         } else {
-          const custRes = await db.query('INSERT INTO Customers (nama) VALUES ($1) RETURNING id', [namaNormalized]);
+          const custRes = await db.query('INSERT INTO customers (nama) VALUES ($1) RETURNING id', [namaNormalized]);
           const customerId = custRes.rows[0].id;
-          // FIX: Menambahkan kolom tahun ke operasi INSERT SQL
-          await db.query('INSERT INTO Vehicles (plat_nomor, merk, model, customer_id, tahun) VALUES ($1, $2, $3, $4, $5)', 
+          await db.query('INSERT INTO vehicles (plat_nomor, merk, model, customer_id, tahun) VALUES ($1, $2, $3, $4, $5)', 
             [platNormalized, data.merk, data.model, customerId, data.tahun]);
         }
       } 
@@ -59,28 +59,28 @@ module.exports = async (req, res) => {
       else if (table === 'Transactions') {
         const { plat, nama, deskripsi, jasa, total, parts } = data;
         await db.query(
-          'INSERT INTO Transactions (plat_kendaraan, nama_pelanggan, deskripsi, biaya_jasa, total_biaya, parts_detail) VALUES ($1, $2, $3, $4, $5, $6)',
+          'INSERT INTO transactions (plat_kendaraan, nama_pelanggan, deskripsi, biaya_jasa, total_biaya, parts_detail) VALUES ($1, $2, $3, $4, $5, $6)',
           [plat || '-', nama || 'Pelanggan Umum', deskripsi || '-', jasa || 0, total, JSON.stringify(parts || [])]
         );
       } 
       
       else if (table === 'Queues') {
-        await db.query('INSERT INTO Queues (vehicle_id, keluhan, nomor_urut) VALUES ($1, $2, $3)', 
+        await db.query('INSERT INTO queues (vehicle_id, keluhan, nomor_urut) VALUES ($1, $2, $3)', 
           [data.vehicle_id, data.keluhan, data.nomor_urut]);
       }
       
       else if (table === 'Parts') {
         if (data.id) { 
-          await db.query('UPDATE Parts SET kode_part = $1, nama_part = $2, stok = $3, harga = $4, kategori_barang = $5 WHERE id = $6',
+          await db.query('UPDATE parts SET kode_part = $1, nama_part = $2, stok = $3, harga = $4, kategori_barang = $5 WHERE id = $6',
             [data.kode, data.nama, data.stok, data.harga, data.kategori, data.id]);
         } else { 
-          await db.query('INSERT INTO Parts (kode_part, nama_part, stok, harga, kategori_barang) VALUES ($1, $2, $3, $4, $5)',
+          await db.query('INSERT INTO parts (kode_part, nama_part, stok, harga, kategori_barang) VALUES ($1, $2, $3, $4, $5)',
             [data.kode, data.nama, data.stok, data.harga, data.kategori]);
         }
       }
       
       else if (table === 'InventoryLogs') {
-        await db.query('INSERT INTO InventoryLogs (nama_part, qty, tipe, waktu, tanggal) VALUES ($1, $2, $3, $4, $5)',
+        await db.query('INSERT INTO inventorylogs (nama_part, qty, tipe, waktu, tanggal) VALUES ($1, $2, $3, $4, $5)',
           [data.nama, data.qty, data.tipe, data.waktu, data.tanggal]);
       }
       
