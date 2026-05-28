@@ -895,12 +895,58 @@ const ui = {
     closeDetailTransaksi() { document.getElementById('modal-detail-transaksi').classList.replace('flex', 'hidden'); },
     
     printStruk(tr) {
-        const a = document.getElementById('invoice-print'); let it = '';
+        const a = document.getElementById('invoice-print'); 
+        let it = '';
         const isP = tr.motor.plat === '-';
-        tr.parts.forEach(p => it += `<tr style="border-bottom:1px dashed #ccc;"><td style="padding:6px 0;">${p.nama} <br><small>x${p.qty}</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td></tr>`);
-        let hH = isP ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
-        a.innerHTML = `<div style="text-align:center;"><h2>MOTOCARE</h2><small>Final Project PBO Edition</small><hr></div><div style="font-size:12px; border-bottom:1px solid #000; padding:10px 0;">${hH}</div><table style="width:100%; font-size:12px;">${!isP?`<tr><td style="padding:6px 0;">Jasa Mekanik: <br><small>${tr.desk}</small></td><td style="text-align:right;">${app.formatRp.format(tr.jasa)}</td></tr>`:''}${it}</table><hr><div style="display:flex; justify-content:space-between; font-weight:bold;"><span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span></div><center><br><small>Terima Kasih!</small></center>`;
-        a.classList.remove('hidden'); setTimeout(() => { window.print(); a.innerHTML = ''; a.classList.add('hidden'); }, 500);
+        
+        // Loop untuk item keranjang (suku cadang)
+        tr.parts.forEach(p => {
+            it += `<tr style="border-bottom:1px dashed #cbd5e1;">
+                <td style="padding:8px 0;">${p.nama} <br><small style="color:#64748b;">x${p.qty}</small></td>
+                <td style="text-align:right; font-weight:bold;">${app.formatRp.format(p.subtotal)}</td>
+            </tr>`;
+        });
+        
+        // Header informasi pelanggan & invoice
+        let hH = isP 
+            ? `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PELANGGAN: UMUM</div>` 
+            : `<div>INV: #${tr.id}</div><div>WAKTU: ${tr.formatWaktu}</div><div>PLAT: ${tr.motor.plat}</div><div>NAMA: ${tr.motor.pemilik}</div>`;
+        
+        // Render ke DOM
+        a.innerHTML = `
+        <div style="text-align:center; padding-bottom: 10px;">
+            <h2 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px;">MOTOCARE</h2>
+            <small style="color: #64748b; font-weight: bold; font-size: 11px;">Final Project PBO Edition</small><br>
+            <small style="color: #64748b; font-weight: bold; font-size: 11px;">Teknik Informatika UNTAD</small>
+            <hr style="border: none; border-top: 1px dashed #94a3b8; margin-top: 15px; margin-bottom: 0;">
+        </div>
+        
+        <div style="font-size:12px; border-bottom:1px dashed #94a3b8; padding:10px 0; line-height: 1.6;">
+            ${hH}
+        </div>
+        
+        <table style="width:100%; font-size:12px; margin-top: 10px;">
+            ${!isP ? `<tr><td style="padding:8px 0;">Jasa Mekanik: <br><small style="color:#64748b;">"${tr.desk}"</small></td><td style="text-align:right; font-weight:bold;">${app.formatRp.format(tr.jasa)}</td></tr>` : ''}
+            ${it}
+        </table>
+        
+        <hr style="border: none; border-top: 1px solid #475569; margin: 15px 0;">
+        
+        <div style="display:flex; justify-content:space-between; font-weight:900; font-size: 14px;">
+            <span>TOTAL</span> <span>${app.formatRp.format(tr.hitungTotal())}</span>
+        </div>
+        
+        <center style="margin-top: 25px;">
+            <small style="font-weight: bold; color: #64748b;">Terima Kasih!</small>
+        </center>`;
+
+        // Munculkan untuk diprint, lalu sembunyikan kembali
+        a.classList.remove('hidden'); 
+        setTimeout(() => { 
+            window.print(); 
+            a.innerHTML = ''; 
+            a.classList.add('hidden'); 
+        }, 500);
     }
 };
 
