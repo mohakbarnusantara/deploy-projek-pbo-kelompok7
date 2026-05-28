@@ -513,6 +513,29 @@ const app = {
         ui.renderCart();
     },
 
+    handleKasirMotorChange() {
+        const motorId = document.getElementById('kasir-motor-id').value;
+        const deskripsiEl = document.getElementById('kasir-deskripsi');
+
+        // Jika opsi di-reset/kosong
+        if (!motorId) {
+            deskripsiEl.value = '';
+            return;
+        }
+
+        // Cari data motor di antrian yang statusnya sedang 'PROSES'
+        const qItem = this.antrian.find(a => a.motorId == motorId && a.status === 'PROSES');
+        
+        if (qItem) {
+            // Mengisi otomatis textarea dengan keluhan awal dan memberi ruang untuk menambahkan teks
+            deskripsiEl.value = `Keluhan awal: ${qItem.keluhan}\nPenanganan: `;
+            // Opsional: Otomatis fokus ke text area setelah memilih motor
+            deskripsiEl.focus();
+        } else {
+            deskripsiEl.value = '';
+        }
+    },
+
     tambahKeKeranjang() {
         const id = document.getElementById('kasir-pilih-part').value, qty = parseInt(document.getElementById('kasir-qty').value);
         if(!id || qty < 1) return;
