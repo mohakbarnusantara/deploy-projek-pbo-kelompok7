@@ -616,23 +616,11 @@ const ui = {
         const sH = app.riwayat.filter(r => r.motor.plat !== '-');
         const dH = app.riwayat.filter(r => r.motor.plat === '-');
         const uM = new Set(sH.map(r => r.motor.plat));
-        
-        const hariIniStr = new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
-        const pendapatanHariIni = app.riwayat.reduce((sum, trx) => {
-            if (trx.formatWaktu.includes(hariIniStr)) {
-                return sum + trx.hitungTotal();
-            }
-            return sum;
-        }, 0);
 
-        const stokKritis = app.parts.filter(p => p.stok < 5).length;
-        
         document.getElementById('stat-motor').innerText = uM.size;
         document.getElementById('stat-antrian').innerText = app.antrian.filter(a=>a.status === 'ANTRIAN').length;
         document.getElementById('stat-proses').innerText = app.antrian.filter(a=>a.status === 'PROSES').length;
         document.getElementById('stat-selesai').innerText = sH.length;
-        document.getElementById('stat-stok-kritis').innerText = stokKritis; 
-        document.getElementById('stat-pendapatan').innerText = app.formatRp.format(pendapatanHariIni); 
 
         const tbS = document.getElementById('table-recent-servis'); tbS.innerHTML = '';
         if(sH.length === 0) tbS.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-400 italic">Belum ada data</td></tr>`;
