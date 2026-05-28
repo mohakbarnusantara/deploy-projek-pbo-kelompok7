@@ -916,8 +916,6 @@ const ui = {
         a.innerHTML = `
         <div style="text-align:center; padding-bottom: 10px;">
             <h2 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 1px;">MOTOCARE</h2>
-            <small style="color: #64748b; font-weight: bold; font-size: 11px;">Final Project PBO Edition</small><br>
-            <small style="color: #64748b; font-weight: bold; font-size: 11px;">Teknik Informatika UNTAD</small>
             <hr style="border: none; border-top: 1px dashed #94a3b8; margin-top: 15px; margin-bottom: 0;">
         </div>
         
